@@ -1,0 +1,13 @@
+{
+  "name": "com.seb.sebstensions",
+  "description": "Various helper functions",
+  "version": "1.0",
+  "unity": "2021.1",
+  "unityRelease": "0a8",
+  "displayName": "Sebstensions",
+  "dependencies": {
+  },
+  "keywords": [
+    "seb"
+  ]
+}
