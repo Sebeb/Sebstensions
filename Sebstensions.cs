@@ -7,6 +7,7 @@ using UnityEditor;
 using UnityEngine.Internal;
 using UnityEngine.UI;
 using UnityEngine;
+using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
 
 public static class Sebstentions
@@ -738,6 +739,22 @@ public static class Sebstentions
 			yield return current;
 	}
 
+	#if UNITY_EDITOR
+	public static IEnumerable<T> FindAssetsByType<T>() where T : Object
+		=> FindAssetsByType(typeof(T)) as IEnumerable<T>;
+
+	public static IEnumerable<Object> FindAssetsByType(Type type) {
+		var guids = AssetDatabase.FindAssets($"t:{type}");
+		foreach (var t in guids) {
+			var assetPath = AssetDatabase.GUIDToAssetPath(t);
+			var asset = AssetDatabase.LoadAssetAtPath(assetPath, type);
+			if (asset != null) {
+				yield return asset;
+			}
+		}
+	}
+	#endif
+
 #endregion
 
 }
@@ -979,7 +996,7 @@ public class Bictionary<T1, T2> : Dictionary<T1, T2>
 	}
 }
 
-[System.Serializable]
+[Serializable]
 public struct TransformStruct
 {
 

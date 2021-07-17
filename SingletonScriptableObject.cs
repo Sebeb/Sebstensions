@@ -8,7 +8,7 @@ using UnityEngine;
 
 public abstract class SingletonMonoBehaviour<T> : MonoBehaviour where T : Component
 {
-    static T _instance = null;
+    static T _instance;
 
 
     protected static T SetInstance()
@@ -25,7 +25,8 @@ public abstract class SingletonMonoBehaviour<T> : MonoBehaviour where T : Compon
             if (instances.Length > 1)
             {
 #if UNITY_EDITOR
-                Debug.LogError("Multiple " + _i.GetType() + " detected. Using " + AssetDatabase.GetAssetPath(instances[0]) + ". Consider destorying imposters.");
+                Debug.LogError("Multiple " + _i.GetType() + " detected. Using " +
+                    AssetDatabase.GetAssetPath(instances[0]) + ". Consider destorying imposters.");
                 #endif
             }
 
@@ -47,7 +48,8 @@ public abstract class SingletonMonoBehaviour<T> : MonoBehaviour where T : Compon
 /// Based on https://www.youtube.com/watch?v=VBA1QCoEAX4
 /// </summary>
 /// <typeparam name="T">Singleton type</typeparam>
-public abstract class SingletonScriptableObject<T> : ScriptableMonoObject where T : ScriptableMonoObject
+public abstract class SingletonScriptableObject<T> : ScriptableMonoObject
+    where T : ScriptableMonoObject
 {
     static T _instance = null;
 
@@ -65,7 +67,8 @@ public abstract class SingletonScriptableObject<T> : ScriptableMonoObject where 
         {
 		#if UNITY_EDITOR
             _instance = ScriptableObject.CreateInstance<T>();
-            AssetDatabase.CreateAsset(_instance, "Assets/Resources/" + typeof(T).ToString().NormalizeCamel() + ".asset");
+            AssetDatabase.CreateAsset(_instance,
+                "Assets/Resources/" + typeof(T).ToString().NormalizeCamel() + ".asset");
             AssetDatabase.SaveAssets();
             Debug.Log("Created new settings file for " + typeof(T).ToString().NormalizeCamel());
 		#else
@@ -77,7 +80,8 @@ public abstract class SingletonScriptableObject<T> : ScriptableMonoObject where 
             if (instances.Length > 1)
             {
 		#if UNITY_EDITOR
-                Debug.LogError("Multiple " + _i.GetType() + " detected. Using " + AssetDatabase.GetAssetPath(instances[0]) + ". Consider destorying imposters.");
+                Debug.LogError("Multiple " + _i.GetType() + " detected. Using " +
+                    AssetDatabase.GetAssetPath(instances[0]) + ". Consider destorying imposters.");
                 #endif
             }
 
@@ -135,11 +139,9 @@ public abstract class ScriptableMonoObject : ScriptableObject
     {
         //Select all types which inherit the generic class SingletonScriptableObject
         IEnumerable<Type> singletonTypes = from t in Assembly.GetExecutingAssembly().GetTypes()
-            where t.IsClass &&
-                !t.IsAbstract &&
-                t.GetInheritanceHierarchy().Any(t =>
-                    t.IsGenericType
-                    && t.GetGenericTypeDefinition() == typeof(SingletonScriptableObject<>))
+            where t.IsClass && !t.IsAbstract && t.GetInheritanceHierarchy().Any(t =>
+                t.IsGenericType &&
+                t.GetGenericTypeDefinition() == typeof(SingletonScriptableObject<>))
             select t;
 
         Debug.Log(string.Join(", ", singletonTypes.Select(t => t.ToString())));
@@ -157,5 +159,6 @@ public abstract class ScriptableMonoObject : ScriptableObject
     public virtual void ScriptAwake() {}
     public virtual void ScriptReset() {}
 
-    public static T GetScriptableSingleton<T>() where T : ScriptableMonoObject => (T)monoScripts.FirstOrDefault(s => s.GetType() == typeof(T));
+    public static T GetScriptableSingleton<T>() where T : ScriptableMonoObject =>
+        (T)monoScripts.FirstOrDefault(s => s.GetType() == typeof(T));
 }
