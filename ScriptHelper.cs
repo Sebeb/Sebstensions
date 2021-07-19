@@ -15,6 +15,7 @@ using UnityEditor;
 public class ScriptHelper : MonoBehaviour
 {
     private static ScriptHelper _instance;
+    private Vector2 screenSize;
 
     public static ScriptHelper mono
     {
@@ -58,6 +59,14 @@ public class ScriptHelper : MonoBehaviour
         return _instance;
     }
 
+    private void Update()
+    {
+        if (Sebstentions.screenSize != screenSize)
+        {
+            CustomMono.OnScreenSizeChange?.Invoke(Sebstentions.screenSize);
+            screenSize = Sebstentions.screenSize;
+        }
+    }
     private void Start() => ScriptableMonoObject.StartMonoScripts();
 
     private void OnApplicationQuit()

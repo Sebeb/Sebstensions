@@ -6,69 +6,57 @@ using UnityEngine;
 using Weaver;
 using Object = UnityEngine.Object;
 
-public class SettingsManager : SingletonScriptableObject<SettingsManager>
+[DefaultExecutionOrder(-999)]
+public class SettingsManager : ScriptableObject
 {
-    [SerializeReference, NonReorderable]
+    [AssetReference]
+    public static SettingsManager _i;
+
+    [SerializeReference]
     public List<SettingsBox> boxes = new List<SettingsBox>();
-    public static Bictionary<Type, HashSet<SettingsBox>> boxDic
-        = new Bictionary<Type, HashSet<SettingsBox>>();
+    public static Dictionary<Type, dynamic> boxDic;
 
-    public static T1 BindSetting<T1, T2>() where T1 : SettingsBox, new() where T2 : MonoBehaviour
-        => Bind(new T1(), typeof(T2)) as T1;
 
-    public static SettingsBox Bind(SettingsBox box, Type objectType)
+    private static void PopulateDicFromList()
     {
-        SettingsBox existingBox = _i.boxes.FirstOrDefault(b => b.GetType() == box.GetType());
-
-        //Remove the dictionary entry for the old owner, if an entry containing this type already
-        //exists and use the pre-existing box instead
-        if (existingBox != null)
+        OrganiseList();
+        boxDic = new Dictionary<Type, dynamic>();
+        foreach (SettingsBox settingsBox in _i.boxes)
         {
-            Type previousOwner
-                = boxDic.Keys.FirstOrDefault(k => boxDic[k].Contains(existingBox));
-            if (previousOwner != objectType)
-            {
-                if (previousOwner != null)
-                {
-                    Debug.Log(
-                        $"Switching binding for {box.name} from {previousOwner} to {objectType}");
-                    boxDic[previousOwner].Remove(existingBox);
-                }
-            }
-            box = existingBox;
-        }
-        else
-        {
-            _i.boxes.Add(box);
-            Debug.Log($"Added new game settings: {box.name}");
-            Refresh();
+            boxDic.Add(settingsBox.GetType(), settingsBox);
         }
 
-        if (!boxDic.ContainsKey(objectType))
-        {
-            boxDic.Add(objectType, new HashSet<SettingsBox>());
-        }
-
-        boxDic[objectType].Add(box);
-
-        box.parentScript = MonoScript.FromMonoBehaviour((MonoBehaviour)FindObjectOfType(objectType));
-
-        return box;
+        Debug.Log($"Loaded {_i.boxes.Count} sets of settings");
     }
 
-    private static void Refresh()
+    public static T1 GetSetting<T1>() where T1 : SettingsBox, new()
+    {
+        if (boxDic == null) { PopulateDicFromList(); }
+
+        boxDic.TryGetValue(typeof(T1), out dynamic existingBox);
+
+        if (existingBox != null) { return existingBox as T1; }
+
+        existingBox = _i.boxes.FirstOrDefault(b => b.GetType() == typeof(T1));
+
+        if (existingBox != null)
+        {
+            boxDic[typeof(T1)] = existingBox;
+            return existingBox as T1;
+        }
+
+        SettingsBox box = new T1();
+        Debug.Log($"Made new {box.GetType().ToString().NormalizeCamel()}");
+        boxDic[typeof(T1)] = box;
+        _i.boxes.Add(box);
+
+        return box as T1;
+    }
+
+    private static void OrganiseList()
     {
         _i.boxes.RemoveAll(b => b == null);
         _i.boxes.Sort((a, b) => a.name.CompareTo(b.name));
     }
-
-    public static SettingsBox[] GetSettingsBoxes(Type mono) => boxDic[mono]?.ToArray();
-
-    public static SettingsBox GetSettings(SettingsBox s) => GetSettings(s.GetType());
-    public static SettingsBox GetSettings(Type t) =>
-        _i.boxes.FirstOrDefault(b => b.GetType() == t);
-    public static SettingsBox GetSettings<T>() where T : SettingsBox
-        => _i.boxes.FirstOrDefault(b => b.GetType() == typeof(T));
-
 
 }

@@ -4,12 +4,12 @@ using NaughtyAttributes.Editor;
 using UnityEditor;
 using UnityEngine;
 [CustomEditor(typeof(MonoBehaviour), true)]
-public class CustomMonoEditor : Editor
+public class CustomMonoEditor : NaughtyInspector
 {
     private SerializedObject so;
     private HashSet<SerializedProperty> settingsSPs;
 
-    protected virtual void OnEnable()
+    protected override void OnEnable()
     {
         settingsSPs = new HashSet<SerializedProperty>();
         foreach (PropertyInfo setting in
@@ -34,6 +34,7 @@ public class CustomMonoEditor : Editor
                 settingsSPs.Add(so.FindProperty($"boxes.Array.data[{i}]"));
             }
         }
+        base.OnEnable();
     }
 
     public override void OnInspectorGUI()
@@ -44,6 +45,6 @@ public class CustomMonoEditor : Editor
         }
         if (settingsSPs.Count > 0) { so.ApplyModifiedProperties(); }
 
-        DrawDefaultInspector();
+        base.OnInspectorGUI();
     }
 }

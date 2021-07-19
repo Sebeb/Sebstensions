@@ -25,7 +25,7 @@ public class SettingsWindow : EditorWindow
     {
         if (settings == null)
         {
-            GUILayout.TextArea("Could not load settings singleton");
+            GUILayout.Label("Could not load settings singleton", new GUIStyle{alignment = TextAnchor.MiddleCenter});
             return;
         }
 

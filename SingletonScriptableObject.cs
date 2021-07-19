@@ -6,7 +6,7 @@ using UnityEditor;
 using UnityEngine;
 
 
-public abstract class SingletonMonoBehaviour<T> : MonoBehaviour where T : Component
+public abstract class SingletonMonoBehaviour<T> : CustomMono where T : Component
 {
     static T _instance;
 
@@ -94,11 +94,7 @@ public abstract class SingletonScriptableObject<T> : ScriptableMonoObject
     {
         get
         {
-            if (_instance is {}
-#if UNITY_EDITOR
-                || AssetDatabase.GetAssetPath(_instance) != null
-        #endif
-            )
+            if (_instance == null)
             {
                 SetInstance();
             }

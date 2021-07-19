@@ -15,7 +15,6 @@ public static class Sebstentions
 	public static Vector2 screenSize { get { return new Vector2(Screen.width, Screen.height); } }
 
 #region Vectors
-
 	public static Vector2 XZ(this Vector3 input)
 	{
 		return new Vector2(input.x, input.z);
@@ -46,107 +45,169 @@ public static class Sebstentions
 		var a = aDegree * Mathf.Deg2Rad;
 		return new Vector2(Mathf.Cos(a), Mathf.Sin(a));
 	}
-	public static Vector2 Rotate(this Vector2 aVec, float aDegree) => ComplexMult(aVec, Rotation(aDegree));
+	public static Vector2 Rotate(this Vector2 aVec, float aDegree) =>
+		ComplexMult(aVec, Rotation(aDegree));
 
 	public static Vector2 SetX(this Vector2 input, float value) => new Vector2(value, input.y);
 	public static Vector2 SetY(this Vector2 input, float value) => new Vector2(input.x, value);
-	public static Vector2 MoveX(this Vector2 input, float value) => new Vector2(input.x + value, input.y);
-	public static Vector2 MoveY(this Vector2 input, float value) => new Vector2(input.x, input.y + value);
-	public static Vector2 ScaleX(this Vector2 input, float value) => new Vector2(input.x * value, input.y);
-	public static Vector2 ScaleY(this Vector2 input, float value) => new Vector2(input.x, input.y * value);
-	public static Vector2 CapMax(this Vector2 input, float value) => new Vector2(input.x.CapMax(value), input.y.CapMax(value));
-	public static Vector2 CapMin(this Vector2 input, float value) => new Vector2(input.x.CapMin(value), input.y.CapMin(value));
-	public static Vector2 Multiply(this Vector2 input, Vector2 value) => new Vector2(input.x * value.x, input.y * value.y);
-	public static Vector2 Divide(this Vector2 input, Vector2 value) => new Vector2(input.x / value.x, input.y / value.y);
+	public static Vector2 MoveX(this Vector2 input, float value) =>
+		new Vector2(input.x + value, input.y);
+	public static Vector2 MoveY(this Vector2 input, float value) =>
+		new Vector2(input.x, input.y + value);
+	public static Vector2 ScaleX(this Vector2 input, float value) =>
+		new Vector2(input.x * value, input.y);
+	public static Vector2 ScaleY(this Vector2 input, float value) =>
+		new Vector2(input.x, input.y * value);
+	public static Vector2 CapMax(this Vector2 input, float value) =>
+		new Vector2(input.x.CapMax(value), input.y.CapMax(value));
+	public static Vector2 CapMin(this Vector2 input, float value) =>
+		new Vector2(input.x.CapMin(value), input.y.CapMin(value));
+	public static Vector2 Multiply(this Vector2 input, Vector2 value) =>
+		new Vector2(input.x * value.x, input.y * value.y);
+	public static Vector2 Divide(this Vector2 input, Vector2 value) =>
+		new Vector2(input.x / value.x, input.y / value.y);
 
-	public static Vector3 SetX(this Vector3 input, float value) => new Vector3(value, input.y, input.z);
-	public static Vector3 SetY(this Vector3 input, float value) => new Vector3(input.x, value, input.z);
-	public static Vector3 SetZ(this Vector3 input, float value) => new Vector3(input.x, input.y, value);
-	public static Vector3 SetMagnitude(this Vector3 input, float value) => new Vector3(input.x, input.y, input.z).normalized * value;
-	public static Vector3 SetZ(this Vector2 input, float value) => new Vector3(input.x, input.y, value);
-	public static Vector3 MoveX(this Vector3 input, float value) => new Vector3(input.x + value, input.y, input.z);
-	public static Vector3 MoveY(this Vector3 input, float value) => new Vector3(input.x, input.y + value, input.z);
-	public static Vector3 MoveZ(this Vector3 input, float value) => new Vector3(input.x, input.y, input.z + value);
-	public static Vector3 ScaleX(this Vector3 input, float value) => new Vector3(input.x * value, input.y, input.z);
-	public static Vector3 ScaleY(this Vector3 input, float value) => new Vector3(input.x, input.y * value, input.z);
-	public static Vector3 ScaleZ(this Vector3 input, float value) => new Vector3(input.x, input.y, input.z * value);
-	public static Vector3 ScaleXY(this Vector3 input, float value) => new Vector3(input.x * value, input.y * value, input.z);
-	public static Vector3 ScaleX(this Vector3Int input, float value) => new Vector3(input.x * value, input.y, input.z);
-	public static Vector3 ScaleY(this Vector3Int input, float value) => new Vector3(input.x, input.y * value, input.z);
-	public static Vector3 ScaleZ(this Vector3Int input, float value) => new Vector3(input.x, input.y, input.z * value);
-	public static Vector3 ScaleXY(this Vector3Int input, float value) => new Vector3(input.x * value, input.y * value, input.z);
+	public static Vector3 SetX(this Vector3 input, float value) =>
+		new Vector3(value, input.y, input.z);
+	public static Vector3 SetY(this Vector3 input, float value) =>
+		new Vector3(input.x, value, input.z);
+	public static Vector3 SetZ(this Vector3 input, float value) =>
+		new Vector3(input.x, input.y, value);
+	public static Vector3 SetMagnitude(this Vector3 input, float value) =>
+		new Vector3(input.x, input.y, input.z).normalized * value;
+	public static Vector3 SetZ(this Vector2 input, float value) =>
+		new Vector3(input.x, input.y, value);
+	public static Vector3 MoveX(this Vector3 input, float value) =>
+		new Vector3(input.x + value, input.y, input.z);
+	public static Vector3 MoveY(this Vector3 input, float value) =>
+		new Vector3(input.x, input.y + value, input.z);
+	public static Vector3 MoveZ(this Vector3 input, float value) =>
+		new Vector3(input.x, input.y, input.z + value);
+	public static Vector3 ScaleX(this Vector3 input, float value) =>
+		new Vector3(input.x * value, input.y, input.z);
+	public static Vector3 ScaleY(this Vector3 input, float value) =>
+		new Vector3(input.x, input.y * value, input.z);
+	public static Vector3 ScaleZ(this Vector3 input, float value) =>
+		new Vector3(input.x, input.y, input.z * value);
+	public static Vector3 ScaleXY(this Vector3 input, float value) =>
+		new Vector3(input.x * value, input.y * value, input.z);
+	public static Vector3 ScaleX(this Vector3Int input, float value) =>
+		new Vector3(input.x * value, input.y, input.z);
+	public static Vector3 ScaleY(this Vector3Int input, float value) =>
+		new Vector3(input.x, input.y * value, input.z);
+	public static Vector3 ScaleZ(this Vector3Int input, float value) =>
+		new Vector3(input.x, input.y, input.z * value);
+	public static Vector3 ScaleXY(this Vector3Int input, float value) =>
+		new Vector3(input.x * value, input.y * value, input.z);
 	public static Vector3 CapMax(this Vector3 input, float value) =>
 		new Vector3(input.x.CapMax(value), input.y.CapMax(value), input.z.CapMax(value));
 	public static Vector3 CapMin(this Vector3 input, float value) =>
 		new Vector3(input.x.CapMin(value), input.y.CapMin(value), input.z.CapMin(value));
-	public static Vector3 Multiply(this Vector3 input, Vector3 value) => new Vector3(input.x * value.x, input.y * value.y, input.z * value.z);
-	public static Vector3 Divide(this Vector3 input, Vector3 value) => new Vector3(input.x / value.x, input.y / value.y, input.z / value.z);
+	public static Vector3 Multiply(this Vector3 input, Vector3 value) =>
+		new Vector3(input.x * value.x, input.y * value.y, input.z * value.z);
+	public static Vector3 Divide(this Vector3 input, Vector3 value) =>
+		new Vector3(input.x / value.x, input.y / value.y, input.z / value.z);
 	public static Vector3 AsVec3X(this float x) => new Vector3(x, 0, 0);
 	public static Vector3 AsVec3Y(this float y) => new Vector3(0, y, 0);
 	public static Vector3 AsVec3Z(this float z) => new Vector3(0, 0, z);
 
-	public static Vector2Int SetX(this Vector2Int input, int value) => new Vector2Int(value, input.y);
-	public static Vector2Int SetY(this Vector2Int input, int value) => new Vector2Int(input.x, value);
-	public static Vector2Int MoveX(this Vector2Int input, int value) => new Vector2Int(input.x + value, input.y);
-	public static Vector2Int MoveY(this Vector2Int input, int value) => new Vector2Int(input.x, input.y + value);
-	public static Vector2Int ScaleX(this Vector2Int input, int value) => new Vector2Int(input.x * value, input.y);
-	public static Vector2Int ScaleY(this Vector2Int input, int value) => new Vector2Int(input.x, input.y * value);
-	public static Vector2Int CapMax(this Vector2Int input, int value) => new Vector2Int(input.x.CapMax(value), input.y.CapMax(value));
-	public static Vector2Int CapMin(this Vector2Int input, int value) => new Vector2Int(input.x.CapMin(value), input.y.CapMin(value));
+	public static Vector2Int SetX(this Vector2Int input, int value) =>
+		new Vector2Int(value, input.y);
+	public static Vector2Int SetY(this Vector2Int input, int value) =>
+		new Vector2Int(input.x, value);
+	public static Vector2Int MoveX(this Vector2Int input, int value) =>
+		new Vector2Int(input.x + value, input.y);
+	public static Vector2Int MoveY(this Vector2Int input, int value) =>
+		new Vector2Int(input.x, input.y + value);
+	public static Vector2Int ScaleX(this Vector2Int input, int value) =>
+		new Vector2Int(input.x * value, input.y);
+	public static Vector2Int ScaleY(this Vector2Int input, int value) =>
+		new Vector2Int(input.x, input.y * value);
+	public static Vector2Int CapMax(this Vector2Int input, int value) =>
+		new Vector2Int(input.x.CapMax(value), input.y.CapMax(value));
+	public static Vector2Int CapMin(this Vector2Int input, int value) =>
+		new Vector2Int(input.x.CapMin(value), input.y.CapMin(value));
 
-	public static Vector3Int SetX(this Vector3Int input, int value) => new Vector3Int(value, input.y, input.z);
-	public static Vector3Int SetY(this Vector3Int input, int value) => new Vector3Int(input.x, value, input.z);
-	public static Vector3Int SetZ(this Vector3Int input, int value) => new Vector3Int(input.x, input.y, value);
-	public static Vector3Int SetZ(this Vector2Int input, int value) => new Vector3Int(input.x, input.y, value);
-	public static Vector3Int MoveX(this Vector3Int input, int value) => new Vector3Int(input.x + value, input.y, input.z);
-	public static Vector3Int MoveY(this Vector3Int input, int value) => new Vector3Int(input.x, input.y + value, input.z);
-	public static Vector3Int MoveZ(this Vector3Int input, int value) => new Vector3Int(input.x, input.y, input.z + value);
+	public static Vector3Int SetX(this Vector3Int input, int value) =>
+		new Vector3Int(value, input.y, input.z);
+	public static Vector3Int SetY(this Vector3Int input, int value) =>
+		new Vector3Int(input.x, value, input.z);
+	public static Vector3Int SetZ(this Vector3Int input, int value) =>
+		new Vector3Int(input.x, input.y, value);
+	public static Vector3Int SetZ(this Vector2Int input, int value) =>
+		new Vector3Int(input.x, input.y, value);
+	public static Vector3Int MoveX(this Vector3Int input, int value) =>
+		new Vector3Int(input.x + value, input.y, input.z);
+	public static Vector3Int MoveY(this Vector3Int input, int value) =>
+		new Vector3Int(input.x, input.y + value, input.z);
+	public static Vector3Int MoveZ(this Vector3Int input, int value) =>
+		new Vector3Int(input.x, input.y, input.z + value);
 	public static Vector3Int CapMax(this Vector3Int input, int value) =>
 		new Vector3Int(input.x.CapMax(value), input.y.CapMax(value), input.z.CapMax(value));
 	public static Vector3Int CapMin(this Vector3Int input, int value) =>
 		new Vector3Int(input.x.CapMin(value), input.y.CapMin(value), input.z.CapMin(value));
 
 
-	public static Vector4 SetX(this Vector4 input, float value) => new Vector4(value, input.y, input.z, input.w);
-	public static Vector4 SetY(this Vector4 input, float value) => new Vector4(input.x, value, input.z, input.w);
-	public static Vector4 SetZ(this Vector4 input, float value) => new Vector4(input.x, input.y, value, input.w);
-	public static Vector4 SetW(this Vector4 input, float value) => new Vector4(input.x, input.y, input.z, value);
-	public static Vector4 MoveX(this Vector4 input, float value) => new Vector4(input.x + value, input.y, input.z, input.w);
-	public static Vector4 MoveY(this Vector4 input, float value) => new Vector4(input.x, input.y + value, input.z, input.w);
-	public static Vector4 MoveZ(this Vector4 input, float value) => new Vector4(input.x, input.y, input.z + value, input.w);
-	public static Vector4 MoveW(this Vector4 input, float value) => new Vector4(input.x, input.y, input.z, input.w + value);
-	public static Vector4 ScaleX(this Vector4 input, float value) => new Vector4(input.x * value, input.y, input.z, input.w);
-	public static Vector4 ScaleY(this Vector4 input, float value) => new Vector4(input.x, input.y * value, input.z, input.w);
-	public static Vector4 ScaleZ(this Vector4 input, float value) => new Vector4(input.x, input.y, input.z * value, input.w);
-	public static Vector4 ScaleW(this Vector4 input, float value) => new Vector4(input.x, input.y, input.z, input.w * value);
-	public static Vector4 ScaleXY(this Vector4 input, float value) => new Vector4(input.x * value, input.y * value, input.z, input.w);
+	public static Vector4 SetX(this Vector4 input, float value) =>
+		new Vector4(value, input.y, input.z, input.w);
+	public static Vector4 SetY(this Vector4 input, float value) =>
+		new Vector4(input.x, value, input.z, input.w);
+	public static Vector4 SetZ(this Vector4 input, float value) =>
+		new Vector4(input.x, input.y, value, input.w);
+	public static Vector4 SetW(this Vector4 input, float value) =>
+		new Vector4(input.x, input.y, input.z, value);
+	public static Vector4 MoveX(this Vector4 input, float value) =>
+		new Vector4(input.x + value, input.y, input.z, input.w);
+	public static Vector4 MoveY(this Vector4 input, float value) =>
+		new Vector4(input.x, input.y + value, input.z, input.w);
+	public static Vector4 MoveZ(this Vector4 input, float value) =>
+		new Vector4(input.x, input.y, input.z + value, input.w);
+	public static Vector4 MoveW(this Vector4 input, float value) =>
+		new Vector4(input.x, input.y, input.z, input.w + value);
+	public static Vector4 ScaleX(this Vector4 input, float value) =>
+		new Vector4(input.x * value, input.y, input.z, input.w);
+	public static Vector4 ScaleY(this Vector4 input, float value) =>
+		new Vector4(input.x, input.y * value, input.z, input.w);
+	public static Vector4 ScaleZ(this Vector4 input, float value) =>
+		new Vector4(input.x, input.y, input.z * value, input.w);
+	public static Vector4 ScaleW(this Vector4 input, float value) =>
+		new Vector4(input.x, input.y, input.z, input.w * value);
+	public static Vector4 ScaleXY(this Vector4 input, float value) =>
+		new Vector4(input.x * value, input.y * value, input.z, input.w);
 	public static Vector4 CapMax(this Vector4 input, float value) =>
-		new Vector4(input.x.CapMax(value), input.y.CapMax(value), input.z.CapMax(value), input.w.CapMax(value));
+		new Vector4(input.x.CapMax(value), input.y.CapMax(value), input.z.CapMax(value),
+			input.w.CapMax(value));
 	public static Vector4 CapMin(this Vector4 input, float value) =>
-		new Vector4(input.x.CapMin(value), input.y.CapMin(value), input.z.CapMin(value), input.w.CapMin(value));
+		new Vector4(input.x.CapMin(value), input.y.CapMin(value), input.z.CapMin(value),
+			input.w.CapMin(value));
 
 
 
 
-	public static void SetLocalPositionAndRotation(this Transform t, Vector3 position, Vector3 rotation)
+	public static void SetLocalPositionAndRotation(this Transform t, Vector3 position,
+		Vector3 rotation)
 	{
 		t.localPosition = position;
 		t.localEulerAngles = rotation;
 	}
-	public static void SetLocalPositionAndRotation(this Transform t, Vector3 position, Quaternion rotation)
+	public static void SetLocalPositionAndRotation(this Transform t, Vector3 position,
+		Quaternion rotation)
 	{
 		t.localPosition = position;
 		t.localRotation = rotation;
 	}
 
-	public static Vector2 RandomTo(this Vector2 min, Vector2 max) => new Vector2(Random.Range(min.x, max.x), Random.Range(min.y, max.y));
+	public static Vector2 RandomTo(this Vector2 min, Vector2 max) =>
+		new Vector2(Random.Range(min.x, max.x), Random.Range(min.y, max.y));
 	public static float RandomRange(this Vector2 input) => Random.Range(input.x, input.y);
 	public static int RandomRange(this Vector2Int input) => Random.Range(input.x, input.y);
 
-	public static Vector3 Modulo(this Vector3 a, Vector3 b) => new Vector3(a.x % b.x, a.y % b.y, a.z % b.z);
+	public static Vector3 Modulo(this Vector3 a, Vector3 b) =>
+		new Vector3(a.x % b.x, a.y % b.y, a.z % b.z);
 
 	/// <summary>Converts an euler rotation to be between 180 and -180, as it appears in the inspector </summary>
-	public static Vector3 WrapAngle(this Vector3 angle) => new Vector3(WrapAngle(angle.x), WrapAngle(angle.y), WrapAngle(angle.z));
+	public static Vector3 WrapAngle(this Vector3 angle) =>
+		new Vector3(WrapAngle(angle.x), WrapAngle(angle.y), WrapAngle(angle.z));
 	/// <summary>Converts an euler rotation to be between 180 and -180, as it appears in the inspector </summary>
 	public static float WrapAngle(this float angle)
 	{
@@ -164,10 +225,37 @@ public static class Sebstentions
 		return 360 - angle;
 	}
 
+	public static Vector3 GetMeanVector(this IEnumerable<Vector3> positions)
+	{
+		if (!positions.Any()) { return Vector3.zero; }
+
+		Vector3 average = new Vector3();
+		foreach (Vector3 pos in positions)
+		{
+			average.x += pos.x;
+			average.y += pos.y;
+			average.z += pos.z;
+		}
+
+		return average /  positions.Count();
+	}
+
+	public static Vector2 GetMeanVector(this IEnumerable<Vector2> positions)
+	{
+		if (!positions.Any()) { return Vector2.zero; }
+
+		Vector2 average = new Vector2();
+		foreach (Vector2 pos in positions)
+		{
+			average.x += pos.x;
+			average.y += pos.y;
+		}
+
+		return average /  positions.Count();
+	}
 #endregion
 
 #region Transform
-
 	public static void ResetLS(this Transform input)
 	{
 		input.localPosition = Vector3.zero;
@@ -236,14 +324,15 @@ public static class Sebstentions
 		if (Application.isPlaying) { GameObject.Destroy(_go); }
 		else { GameObject.DestroyImmediate(_go); }
 	}
-
 #endregion
 
 #region String
-
 	public static string TryRemove(this string input, int removeAt, bool appendEllipsis = false)
 	{
-		if (removeAt > 0 && removeAt < input.Length) { return input.Remove(removeAt) + (appendEllipsis ? "..." : ""); }
+		if (removeAt > 0 && removeAt < input.Length)
+		{
+			return input.Remove(removeAt) + (appendEllipsis ? "..." : "");
+		}
 		else return input;
 	}
 
@@ -263,7 +352,8 @@ public static class Sebstentions
 		return input;
 	}
 
-	public static bool Contains(this string[] source, string toCheck, StringComparison comp) => source.Any(s => s.Equals(toCheck, comp));
+	public static bool Contains(this string[] source, string toCheck, StringComparison comp) =>
+		source.Any(s => s.Equals(toCheck, comp));
 
 	public static bool Contains(this string source, string toCheck, StringComparison comp)
 	{
@@ -299,11 +389,13 @@ public static class Sebstentions
 
 	public static string CapitalizeFirstWord(this string s)
 	{
-		return s == null || s.Length == 0 || Char.IsUpper(s[0]) ? s : Char.ToUpper(s[0]) + s.Substring(1);
+		return s == null || s.Length == 0 || Char.IsUpper(s[0]) ? s
+			: Char.ToUpper(s[0]) + s.Substring(1);
 
 	}
 
-	readonly static string[] NoCapitalize = new string[] { "for", "and", "the", "of", "in", "a", "an", "or" };
+	readonly static string[] NoCapitalize = new string[]
+		{ "for", "and", "the", "of", "in", "a", "an", "or" };
 	public static string CapitalizeTitle(this string @in, bool capitalizeStart = true)
 	{
 
@@ -320,7 +412,8 @@ public static class Sebstentions
 			string word = @in.Substring(c);
 			if (i < spaces.Count - 1) { word = word.Remove(spaces[i + 1] - c); }
 
-			if (NoCapitalize.Any(s => String.Equals(s, word, StringComparison.CurrentCultureIgnoreCase))) { continue; }
+			if (NoCapitalize.Any(s =>
+				String.Equals(s, word, StringComparison.CurrentCultureIgnoreCase))) { continue; }
 
 			@in = @in.Insert(c, Char.ToUpper(@in[c]).ToString());
 			@in = @in.Remove(c + 1, 1);
@@ -360,12 +453,15 @@ public static class Sebstentions
 		}
 	}
 
-	public static int IndexOfAnyString(this string input, string[] strings, bool indexAfterString = false, bool caseSensitive = true)
+	public static int IndexOfAnyString(this string input, string[] strings,
+		bool indexAfterString = false, bool caseSensitive = true)
 	{
 		int breakPoint = -1;
 		for (int i = 0; i < strings.Length; i++)
 		{
-			int newBreak = input.IndexOf(strings[i], caseSensitive ? StringComparison.CurrentCulture : StringComparison.CurrentCultureIgnoreCase);
+			int newBreak = input.IndexOf(strings[i],
+				caseSensitive ? StringComparison.CurrentCulture
+					: StringComparison.CurrentCultureIgnoreCase);
 			if (newBreak == -1) { continue; }
 
 			if (indexAfterString) { newBreak += strings[i].Length; }
@@ -374,12 +470,15 @@ public static class Sebstentions
 		return breakPoint;
 	}
 
-	public static int LastIndexOfAnyString(this string input, string[] strings, bool indexAfterString = false, bool caseSensitive = true)
+	public static int LastIndexOfAnyString(this string input, string[] strings,
+		bool indexAfterString = false, bool caseSensitive = true)
 	{
 		int breakPoint = -1;
 		for (int i = 0; i < strings.Length; i++)
 		{
-			int newBreak = input.LastIndexOf(strings[i], caseSensitive ? StringComparison.CurrentCulture : StringComparison.CurrentCultureIgnoreCase);
+			int newBreak = input.LastIndexOf(strings[i],
+				caseSensitive ? StringComparison.CurrentCulture
+					: StringComparison.CurrentCultureIgnoreCase);
 			if (newBreak == -1) { continue; }
 
 			if (indexAfterString) { newBreak += strings[i].Length; }
@@ -388,7 +487,8 @@ public static class Sebstentions
 		return breakPoint;
 	}
 
-	public static string StripPunctuation(this string input) => new string(input.Where(c => !char.IsPunctuation(c)).ToArray());
+	public static string StripPunctuation(this string input) =>
+		new string(input.Where(c => !char.IsPunctuation(c)).ToArray());
 
 	public static string CombinePaths(this string path1, params string[] paths)
 	{
@@ -403,7 +503,8 @@ public static class Sebstentions
 		return paths.Aggregate(path1, (acc, p) => Path.Combine(acc, p));
 	}
 
-	public static string Range(this string @in, int start, int end) => @in.Remove(end).Substring(start);
+	public static string Range(this string @in, int start, int end) =>
+		@in.Remove(end).Substring(start);
 
 	public static int WordCount(this string test)
 	{
@@ -425,14 +526,15 @@ public static class Sebstentions
 		return count;
 	}
 
-	public static float GetPunctuationRatio(this string input) => (float)input.Count(c => !Char.IsLetterOrDigit(c)) / (float)input.Length;
+	public static float GetPunctuationRatio(this string input) =>
+		(float)input.Count(c => !Char.IsLetterOrDigit(c)) / (float)input.Length;
 
-	public static float GetWhitespaceRatio(this string input) => (float)input.Count(c => !Char.IsWhiteSpace(c)) / (float)input.Length;
-
+	public static float GetWhitespaceRatio(this string input) =>
+		(float)input.Count(c => !Char.IsWhiteSpace(c)) / (float)input.Length;
 #endregion
 
 #region Colour
-
+	public static Color MoveA(this Color input, float a) => input.SetA(Mathf.Clamp01(input.a + a));
 	public static Color SetA(this Color input, float a)
 	{
 		input.a = a;
@@ -459,10 +561,10 @@ public static class Sebstentions
 	public static string AsHex(this Color c) =>
 		"#" + c.r.ToString("X2") + c.g.ToString("X2") + c.b.ToString("X2");
 
+	public static Color GetRandom(this Gradient g) => g.Evaluate(Random.value);
 #endregion
 
 #region Collections
-
 	private static System.Random _random = new System.Random();
 
 	public static T GetRandomOrDefault<T>(this IEnumerable<T> list)
@@ -496,14 +598,13 @@ public static class Sebstentions
 		}
 	}
 
-	public static Dictionary<T1, T2> ToDictionary<T1, T2>(this IEnumerable<T1> keys, IEnumerable<T2> values)
-		=> keys.Zip(values, (key, value) => new { key, value })
+	public static Dictionary<T1, T2> ToDictionary<T1, T2>(this IEnumerable<T1> keys,
+		IEnumerable<T2> values) =>
+		keys.Zip(values, (key, value) => new { key, value })
 			.ToDictionary(val => val.key, val => val.value);
-
 #endregion
 
 #region GameObject
-
 	public static Transform GetOrMakeChild(this Transform trans, string name)
 	{
 		if (trans)
@@ -517,9 +618,12 @@ public static class Sebstentions
 
 	}
 
-	public static Transform AddChild(this Transform trans, string name, bool resetLocalScale = true) =>
-		trans ? trans.gameObject.AddChild(name, resetLocalScale).transform : new GameObject(name).transform;
-	public static GameObject AddChild(this GameObject input, string name, bool resetLocalScale = true)
+	public static Transform
+		AddChild(this Transform trans, string name, bool resetLocalScale = true) =>
+		trans ? trans.gameObject.AddChild(name, resetLocalScale).transform
+			: new GameObject(name).transform;
+	public static GameObject AddChild(this GameObject input, string name,
+		bool resetLocalScale = true)
 	{
 
 		GameObject ret = new GameObject(name);
@@ -549,25 +653,31 @@ public static class Sebstentions
 	{
 		return mask == (mask | (1 << layer));
 	}
-
 #endregion
 
 #region Cameras
+	// public static Bounds OrthographicBoundsWS(this Camera camera)
+	// {
+	// 	float screenAspect = (float)Screen.width / (float)Screen.height;
+	// 	float cameraHeight = camera.orthographicSize * 2;
+	// 	Bounds bounds = new Bounds(
+	// 		camera.transform.position,
+	// 		new Vector3(cameraHeight * screenAspect, cameraHeight, 0));
+	// 	return bounds;
+	// }
 
-		public static Bounds OrthographicBoundsWS(this Camera camera)
-		{
-			float screenAspect = (float)Screen.width / (float)Screen.height;
-			float cameraHeight = camera.orthographicSize * 2;
-			Bounds bounds = new Bounds(
-				camera.transform.position,
-				new Vector3(cameraHeight * screenAspect, cameraHeight, 0));
-			return bounds;
-		}
+	public static Rect GetCornersWS(this Camera camera)
+	{
+		Vector2 bottomLeft = camera.ScreenToWorldPoint(Vector2.zero);
+		Vector2 topRight
+			= camera.ScreenToWorldPoint(new Vector2(camera.pixelWidth, camera.pixelHeight));
+
+		return new Rect(bottomLeft, topRight - bottomLeft);
+	}
 #endregion
 
 
 #region Logic
-
 	public static bool LiesBetween(this int num, int lower, int upper, bool inclusive = false)
 	{
 		return inclusive
@@ -580,19 +690,17 @@ public static class Sebstentions
 			? lower <= num && num <= upper
 			: lower < num && num < upper;
 	}
-
 #endregion
 
 #region Maths
+	public static float RoundToMultiple(this float value, float multipleOf) =>
+		Mathf.Round(value / multipleOf) * multipleOf;
 
-	public static float RoundToMultiple(this float value, float multipleOf)
-		=> Mathf.Round(value / multipleOf) * multipleOf;
+	public static float RoundDownToMultiple(this float value, float multipleOf) =>
+		value - value % multipleOf;
 
-	public static float RoundDownToMultiple(this float value, float multipleOf)
-		=> value - value % multipleOf;
-
-	public static float RoundUpToMultiple(this float value, float multipleOf)
-		=> RoundDownToMultiple(value, multipleOf) + multipleOf;
+	public static float RoundUpToMultiple(this float value, float multipleOf) =>
+		RoundDownToMultiple(value, multipleOf) + multipleOf;
 
 	public static int Idx(int x, int y, int z, int sX, int sY) => x + y * sX + z * sX * sY;
 	public static int Wrap(this int x, int m) => (x % m + m) % m;
@@ -609,17 +717,19 @@ public static class Sebstentions
 	public static float CapMin(this float f, float min) => Mathf.Max(f, min);
 	public static int CapMax(this int i, int max) => Mathf.Min(i, max);
 	public static int CapMin(this int i, int min) => Mathf.Max(i, min);
-
 #endregion
 
 #region Movement
-
 	/// <returns>-1 or 1 with 50:50 chance</returns>
 	public static int RandomDirection() => (Random.Range(0, 2) == 1).AsDirectionalInt();
 
-	public static float SnappedSmoothDampTo(this float current, float target, ref float currentVelocity, float snapDistance, ref bool moving
-		, float smoothTime) => SnappedSmoothDampTo(current, target, ref currentVelocity, snapDistance, ref moving, smoothTime, Mathf.Infinity);
-	public static float SnappedSmoothDampTo(this float current, float target, ref float currentVelocity, float snapDistance, ref bool moving
+	public static float SnappedSmoothDampTo(this float current, float target,
+		ref float currentVelocity, float snapDistance, ref bool moving
+		, float smoothTime) =>
+		SnappedSmoothDampTo(current, target, ref currentVelocity, snapDistance, ref moving,
+			smoothTime, Mathf.Infinity);
+	public static float SnappedSmoothDampTo(this float current, float target,
+		ref float currentVelocity, float snapDistance, ref bool moving
 		, float smoothTime, float maxSpeed)
 	{
 		if (Mathf.Abs(target - current) < snapDistance)
@@ -635,9 +745,13 @@ public static class Sebstentions
 		}
 	}
 
-	public static Vector3 SnappedSmoothDampTo(this Vector3 current, Vector3 target, ref Vector3 currentVelocity, float snapDistance, ref bool moving
-		, float smoothTime) => SnappedSmoothDampTo(current, target, ref currentVelocity, snapDistance, ref moving, smoothTime, Mathf.Infinity);
-	public static Vector3 SnappedSmoothDampTo(this Vector3 current, Vector3 target, ref Vector3 currentVelocity, float snapDistance, ref bool moving
+	public static Vector3 SnappedSmoothDampTo(this Vector3 current, Vector3 target,
+		ref Vector3 currentVelocity, float snapDistance, ref bool moving
+		, float smoothTime) =>
+		SnappedSmoothDampTo(current, target, ref currentVelocity, snapDistance, ref moving,
+			smoothTime, Mathf.Infinity);
+	public static Vector3 SnappedSmoothDampTo(this Vector3 current, Vector3 target,
+		ref Vector3 currentVelocity, float snapDistance, ref bool moving
 		, float smoothTime, float maxSpeed)
 	{
 		if ((target - current).magnitude < snapDistance)
@@ -648,14 +762,13 @@ public static class Sebstentions
 		else
 		{
 			moving = true;
-			return Vector3.SmoothDamp(current, target, ref currentVelocity, snapDistance, smoothTime, maxSpeed);
+			return Vector3.SmoothDamp(current, target, ref currentVelocity, snapDistance,
+				smoothTime, maxSpeed);
 		}
 	}
-
 #endregion
 
 #region UI
-
 	public static Vector2 SnapScrollToChild(this ScrollRect instance, RectTransform child)
 	{
 		Canvas.ForceUpdateCanvases();
@@ -667,22 +780,22 @@ public static class Sebstentions
 		);
 		return result;
 	}
-
 #endregion
 
 #region Files
-
 	/// <summary>
 	/// Returns a version of the filepath which, if necessary, contains a number to ensure it is unique (e.g. untitlefile3.txt)
 	/// </summary>
-	public static string GetIncrementalFileNumber(this string path, bool brackets = false, bool filenameOnly = false)
+	public static string GetIncrementalFileNumber(this string path, bool brackets = false,
+		bool filenameOnly = false)
 	{
 		if (!System.IO.File.Exists(path))
 		{
 			return filenameOnly ? path.Split('/').Last() : path;
 		}
 		int fileCount = 1;
-		string extensionlessPath = Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path));
+		string extensionlessPath = Path.Combine(Path.GetDirectoryName(path),
+			Path.GetFileNameWithoutExtension(path));
 		string extension = Path.GetExtension(path);
 
 		string newPath;
@@ -692,7 +805,8 @@ public static class Sebstentions
 			newPath = brackets
 				? String.Concat(extensionlessPath, " (", ++fileCount, ')', extension)
 				: String.Concat(extensionlessPath, ++fileCount, extension);
-		} while (System.IO.File.Exists(newPath));
+		}
+		while (System.IO.File.Exists(newPath));
 
 		if (filenameOnly)
 		{
@@ -706,7 +820,8 @@ public static class Sebstentions
 	/// <summary>
 	/// Returns a version of the folderpath which, if necessary, contains a number to ensure it is unique (e.g. untitlefile3.txt)
 	/// </summary>
-	public static string GetIncrementalFolderNumber(this string path, bool brackets = false, bool foldernameOnly = false)
+	public static string GetIncrementalFolderNumber(this string path, bool brackets = false,
+		bool foldernameOnly = false)
 	{
 		string pathReturn = foldernameOnly ? path.Split('/').Last() : path;
 
@@ -722,16 +837,15 @@ public static class Sebstentions
 				brackets
 					? String.Concat(path, " (", folderCount, ')')
 					: "" + ++folderCount);
-		} while (System.IO.Directory.Exists(newPath));
+		}
+		while (System.IO.Directory.Exists(newPath));
 
 		return newPath;
 
 	}
-
 #endregion
 
 #region Types
-
 	public static IEnumerable<Type> GetInheritanceHierarchy
 		(this Type type)
 	{
@@ -740,21 +854,23 @@ public static class Sebstentions
 	}
 
 	#if UNITY_EDITOR
-	public static IEnumerable<T> FindAssetsByType<T>() where T : Object
-		=> FindAssetsByType(typeof(T)) as IEnumerable<T>;
+	public static IEnumerable<T> FindAssetsByType<T>() where T : Object =>
+		FindAssetsByType(typeof(T)) as IEnumerable<T>;
 
-	public static IEnumerable<Object> FindAssetsByType(Type type) {
+	public static IEnumerable<Object> FindAssetsByType(Type type)
+	{
 		var guids = AssetDatabase.FindAssets($"t:{type}");
-		foreach (var t in guids) {
+		foreach (var t in guids)
+		{
 			var assetPath = AssetDatabase.GUIDToAssetPath(t);
 			var asset = AssetDatabase.LoadAssetAtPath(assetPath, type);
-			if (asset != null) {
+			if (asset != null)
+			{
 				yield return asset;
 			}
 		}
 	}
 	#endif
-
 #endregion
 
 }
@@ -824,8 +940,8 @@ public struct Vector3IntRange
 		}
 	}
 
-	public Vector3Int GetRandom()
-		=> new Vector3Int(Random.Range(min.x, max.x),
+	public Vector3Int GetRandom() =>
+		new Vector3Int(Random.Range(min.x, max.x),
 			Random.Range(min.y, max.y),
 			Random.Range(min.z, max.z));
 }
@@ -870,8 +986,8 @@ public struct Vector3Range
 		}
 	}
 
-	public Vector3 GetRandom()
-		=> new Vector3(Random.Range(min.x, max.x),
+	public Vector3 GetRandom() =>
+		new Vector3(Random.Range(min.x, max.x),
 			Random.Range(min.y, max.y),
 			Random.Range(min.z, max.z));
 }
@@ -907,8 +1023,8 @@ public struct Vector2Range
 		}
 	}
 
-	public Vector2 GetRandom()
-		=> new Vector2(Random.Range(min.x, max.x),
+	public Vector2 GetRandom() =>
+		new Vector2(Random.Range(min.x, max.x),
 			Random.Range(min.y, max.y));
 }
 
@@ -1037,8 +1153,9 @@ public struct TransformStruct
 		this.scale = Vector3.one;
 	}
 
-	public static TransformStruct operator +(TransformStruct a, TransformStruct b) =>
-		new TransformStruct(a.position + b.position, a.rotation * b.rotation, a.scale.Multiply(b.scale));
+	public static TransformStruct operator+(TransformStruct a, TransformStruct b) =>
+		new TransformStruct(a.position + b.position, a.rotation * b.rotation,
+			a.scale.Multiply(b.scale));
 }
 
 public static class TransformStructOverride
@@ -1144,6 +1261,7 @@ public static class Lines
 	{
 		if (points?.Length < 3) return false;
 
-		return IsInTriangle(p, points[0].position.XZ(), points[1].position.XZ(), points[2].position.XZ());
+		return IsInTriangle(p, points[0].position.XZ(), points[1].position.XZ(),
+			points[2].position.XZ());
 	}
 }
