@@ -3,7 +3,7 @@ using System.Reflection;
 using NaughtyAttributes.Editor;
 using UnityEditor;
 using UnityEngine;
-[CustomEditor(typeof(MonoBehaviour), true)]
+[CustomEditor(typeof(CustomMono), true)]
 public class CustomMonoEditor : NaughtyInspector
 {
     private SerializedObject so;

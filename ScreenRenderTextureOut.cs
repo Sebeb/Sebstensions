@@ -29,7 +29,7 @@ public class ScreenRenderTextureOut : MonoBehaviour
 
     void Update()
     {
-        if (Sebstentions.screenSize == prevScreenSize) { return; }
+        if (Seb.screenSize == prevScreenSize) { return; }
         BindRenderTexture();
     }
 
@@ -44,7 +44,7 @@ public class ScreenRenderTextureOut : MonoBehaviour
             (int)(Screen.height / downsampling), 0, format);
         Shader.SetGlobalTexture(bufferName, cam.targetTexture);
 
-        prevScreenSize = Sebstentions.screenSize;
+        prevScreenSize = Seb.screenSize;
     }
 
     private void OnDisable()

@@ -10,7 +10,7 @@ using UnityEngine;
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
 
-public static class Sebstentions
+public static class Seb
 {
 	public static Vector2 screenSize { get { return new Vector2(Screen.width, Screen.height); } }
 
@@ -237,7 +237,7 @@ public static class Sebstentions
 			average.z += pos.z;
 		}
 
-		return average /  positions.Count();
+		return average / positions.Count();
 	}
 
 	public static Vector2 GetMeanVector(this IEnumerable<Vector2> positions)
@@ -251,7 +251,7 @@ public static class Sebstentions
 			average.y += pos.y;
 		}
 
-		return average /  positions.Count();
+		return average / positions.Count();
 	}
 #endregion
 
@@ -853,24 +853,35 @@ public static class Sebstentions
 			yield return current;
 	}
 
-	#if UNITY_EDITOR
-	public static IEnumerable<T> FindAssetsByType<T>() where T : Object =>
-		FindAssetsByType(typeof(T)) as IEnumerable<T>;
+#if UNITY_EDITOR
+	public static IEnumerable<T> FindAssetsByType<T>() where T : UnityEngine.Object =>
+		AssetDatabase.FindAssets($"t:{typeof(T)}")
+			.Select(t => AssetDatabase.GUIDToAssetPath(t))
+			.Select(assetPath => AssetDatabase.LoadAssetAtPath<T>(assetPath))
+			.Where(asset => asset != null).ToList();
 
 	public static IEnumerable<Object> FindAssetsByType(Type type)
 	{
-		var guids = AssetDatabase.FindAssets($"t:{type}");
-		foreach (var t in guids)
+		foreach (string t in AssetDatabase.FindAssets($"t:{type}"))
 		{
-			var assetPath = AssetDatabase.GUIDToAssetPath(t);
-			var asset = AssetDatabase.LoadAssetAtPath(assetPath, type);
+			string assetPath = AssetDatabase.GUIDToAssetPath(t);
+			Debug.Log(assetPath);
+			Object asset = AssetDatabase.LoadAssetAtPath(assetPath, type);
 			if (asset != null)
 			{
 				yield return asset;
 			}
 		}
 	}
-	#endif
+#endif
+
+	public static IEnumerable<Type> GetAllClassDerivatives<T>() where T : class =>
+		System.Reflection.Assembly.GetExecutingAssembly().GetTypes()
+			.Where(t => t.IsSubclassOf(typeof(T)));
+	// AppDomain.CurrentDomain.GetAssemblies()
+	// 	.SelectMany(assembly => assembly.GetTypes())
+	// 	.Where(type => type.IsSubclassOf(typeof(T)))
+	// 	.Select(type => Activator.CreateInstance(type) as T);
 #endregion
 
 }

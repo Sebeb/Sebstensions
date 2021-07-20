@@ -21,6 +21,7 @@ public class SettingsWindow : EditorWindow
         window.Show();
     }
 
+    private Vector2 scrollPos;
     private void OnGUI()
     {
         if (settings == null)
@@ -29,6 +30,7 @@ public class SettingsWindow : EditorWindow
             return;
         }
 
+        scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
         EditorGUILayout.BeginVertical(new GUIStyle
         {
             margin = new RectOffset(5, 15, 3, 3)
@@ -45,6 +47,8 @@ public class SettingsWindow : EditorWindow
         }
 
         EditorGUILayout.EndVertical();
+        EditorGUILayout.EndScrollView();
+
 
         so.ApplyModifiedProperties();
 

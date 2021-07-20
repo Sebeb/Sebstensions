@@ -6,39 +6,31 @@ using UnityEditor;
 using UnityEngine;
 
 
-public abstract class SingletonMonoBehaviour<T> : CustomMono where T : Component
+public abstract class SingletonMonoBehaviour<T> : CustomMono where T : SingletonMonoBehaviour<T>
 {
-    static T _instance;
 
 
-    protected static T SetInstance()
-    {
-        if (_instance) { return _instance; }
+	protected override void Assign() => SetInstance();
+	private void SetInstance()
+	{
 
-        T[] instances = GameObject.FindObjectsOfType<T>();
-        if (instances.Length == 0)
-        {
-            _instance = new GameObject(typeof(T).ToString()).AddComponent<T>();
-        }
-        else
-        {
-            if (instances.Length > 1)
-            {
-#if UNITY_EDITOR
-                Debug.LogError("Multiple " + _i.GetType() + " detected. Using " +
-                    AssetDatabase.GetAssetPath(instances[0]) + ". Consider destorying imposters.");
-                #endif
-            }
+		if (_i != null)
+		{
+			if (_i == this) { return; }
 
-            _instance = instances[0];
-        }
-        return _instance;
-    }
-    // ReSharper disable once InconsistentNaming
-    public static T _i
-    {
-        get => _instance ?? SetInstance();
-    }
+			Debug.LogError($"Multiple instances of{GetType()} found", this);
+			return;
+		}
+		// Debug.Log($"Set instance {GetType()}", this);
+
+		_i = this as T;
+	}
+	// ReSharper disable once InconsistentNaming
+	public static T _i
+	{
+		get;
+		private set;
+	}
 
 }
 
@@ -49,112 +41,112 @@ public abstract class SingletonMonoBehaviour<T> : CustomMono where T : Component
 /// </summary>
 /// <typeparam name="T">Singleton type</typeparam>
 public abstract class SingletonScriptableObject<T> : ScriptableMonoObject
-    where T : ScriptableMonoObject
+	where T : ScriptableMonoObject
 {
-    static T _instance = null;
+	static T _instance = null;
 
 
-    protected static T SetInstance()
-    {
-        // if (_instance != null) { return _instance; }
+	protected static T SetInstance()
+	{
+		// if (_instance != null) { return _instance; }
 
-        T[] instances = Resources.LoadAll<T>("")
+		T[] instances = Resources.LoadAll<T>("")
+			#if UNITY_EDITOR
+				.Where(i => AssetDatabase.GetAssetPath(i) != null).ToArray()
+		#endif
+			;
+		if (instances.Length == 0)
+		{
 		#if UNITY_EDITOR
-                .Where(i => AssetDatabase.GetAssetPath(i) != null).ToArray()
-            #endif
-            ;
-        if (instances.Length == 0)
-        {
-		#if UNITY_EDITOR
-            _instance = ScriptableObject.CreateInstance<T>();
-            AssetDatabase.CreateAsset(_instance,
-                "Assets/Resources/" + typeof(T).ToString().NormalizeCamel() + ".asset");
-            AssetDatabase.SaveAssets();
-            Debug.Log("Created new settings file for " + typeof(T).ToString().NormalizeCamel());
+			_instance = ScriptableObject.CreateInstance<T>();
+			AssetDatabase.CreateAsset(_instance,
+				"Assets/Resources/" + typeof(T).ToString().NormalizeCamel() + ".asset");
+			AssetDatabase.SaveAssets();
+			Debug.Log("Created new settings file for " + typeof(T).ToString().NormalizeCamel());
 		#else
             Debug.LogError("No scriptable object singleton of type " + typeof(T));
 		#endif
-        }
-        else
-        {
-            if (instances.Length > 1)
-            {
-		#if UNITY_EDITOR
-                Debug.LogError("Multiple " + _i.GetType() + " detected. Using " +
-                    AssetDatabase.GetAssetPath(instances[0]) + ". Consider destorying imposters.");
-                #endif
-            }
+		}
+		else
+		{
+			if (instances.Length > 1)
+			{
+			#if UNITY_EDITOR
+				Debug.LogError("Multiple " + _i.GetType() + " detected. Using " +
+					AssetDatabase.GetAssetPath(instances[0]) + ". Consider destorying imposters.");
+			#endif
+			}
 
-            _instance = instances[0];
-        }
-        return _instance;
-    }
-    // ReSharper disable once InconsistentNaming
-    public static T _i
-    {
-        get
-        {
-            if (_instance == null)
-            {
-                SetInstance();
-            }
-            return _instance;
-        }
-    }
+			_instance = instances[0];
+		}
+		return _instance;
+	}
+	// ReSharper disable once InconsistentNaming
+	public static T _i
+	{
+		get
+		{
+			if (_instance == null)
+			{
+				SetInstance();
+			}
+			return _instance;
+		}
+	}
 
 }
 
 public abstract class ScriptableMonoObject : ScriptableObject
 {
-    private static ScriptableMonoObject[] _monoScripts;
-    public static ScriptableMonoObject[] monoScripts
-    {
-        get
-        {
-            //Update monoscripts listing if not previously updated or if we're in the editor
-            if (Application.isEditor || _monoScripts == null || _monoScripts.Length == 0)
-            {
-                _monoScripts = Resources.LoadAll<ScriptableMonoObject>("");
-            }
-            return _monoScripts;
-        }
-        set => _monoScripts = value;
-    }
+	private static ScriptableMonoObject[] _monoScripts;
+	public static ScriptableMonoObject[] monoScripts
+	{
+		get
+		{
+			//Update monoscripts listing if not previously updated or if we're in the editor
+			if (Application.isEditor || _monoScripts == null || _monoScripts.Length == 0)
+			{
+				_monoScripts = Resources.LoadAll<ScriptableMonoObject>("");
+			}
+			return _monoScripts;
+		}
+		set => _monoScripts = value;
+	}
 
-    public static void StartMonoScripts()
-    {
-        if (!Application.isPlaying) { return; }
-        foreach (ScriptableMonoObject monoScript in ScriptableMonoObject.monoScripts)
-        {
-            monoScript.ScriptAwake();
-        }
-    }
+	public static void StartMonoScripts()
+	{
+		if (!Application.isPlaying) { return; }
+		foreach (ScriptableMonoObject monoScript in ScriptableMonoObject.monoScripts)
+		{
+			monoScript.ScriptAwake();
+		}
+	}
 
-    //TODO Init all singletons which implement SingletonScriptableObject<>
-    public static void InitSingletons()
-    {
-        //Select all types which inherit the generic class SingletonScriptableObject
-        IEnumerable<Type> singletonTypes = from t in Assembly.GetExecutingAssembly().GetTypes()
-            where t.IsClass && !t.IsAbstract && t.GetInheritanceHierarchy().Any(t =>
-                t.IsGenericType &&
-                t.GetGenericTypeDefinition() == typeof(SingletonScriptableObject<>))
-            select t;
+	//TODO Init all singletons which implement SingletonScriptableObject<>
+	public static void InitSingletons()
+	{
+		//Select all types which inherit the generic class SingletonScriptableObject
+		IEnumerable<Type> singletonTypes = from t in Assembly.GetExecutingAssembly().GetTypes()
+			where t.IsClass && !t.IsAbstract && t.GetInheritanceHierarchy().Any(t =>
+				t.IsGenericType &&
+				t.GetGenericTypeDefinition() == typeof(SingletonScriptableObject<>))
+			select t;
 
-        Debug.Log(string.Join(", ", singletonTypes.Select(t => t.ToString())));
-    }
+		Debug.Log(string.Join(", ", singletonTypes.Select(t => t.ToString())));
+	}
 
-    public static void ResetMonoScripts()
-    {
-        foreach (ScriptableMonoObject monoScript in ScriptableMonoObject.monoScripts)
-        {
-            monoScript.ScriptReset();
-        }
-    }
+	public static void ResetMonoScripts()
+	{
+		foreach (ScriptableMonoObject monoScript in ScriptableMonoObject.monoScripts)
+		{
+			monoScript.ScriptReset();
+		}
+	}
 
 
-    public virtual void ScriptAwake() {}
-    public virtual void ScriptReset() {}
+	public virtual void ScriptAwake() {}
+	public virtual void ScriptReset() {}
 
-    public static T GetScriptableSingleton<T>() where T : ScriptableMonoObject =>
-        (T)monoScripts.FirstOrDefault(s => s.GetType() == typeof(T));
+	public static T GetScriptableSingleton<T>() where T : ScriptableMonoObject =>
+		(T)monoScripts.FirstOrDefault(s => s.GetType() == typeof(T));
 }
