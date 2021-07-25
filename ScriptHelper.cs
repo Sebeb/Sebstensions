@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -26,11 +23,15 @@ public class ScriptHelper : MonoBehaviour
                 Debug.LogError("Coroutines only operational in play-mode");
                 return null;
             }
+            _instance ??= Init();
             return _instance;
         }
     }
 
-    public static Coroutine DoCoroutine(IEnumerator routine) => mono.StartCoroutine(routine);
+    public static Coroutine DoCoroutine(IEnumerator routine)
+    {
+        return mono.StartCoroutine(routine);
+    }
 
     [
 		#if UNITY_EDITOR

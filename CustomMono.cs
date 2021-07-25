@@ -1,21 +1,12 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using UnityEngine;
 using UnityEditor;
-using UnityEditor.Callbacks;
-using Weaver;
 
 public abstract class CustomMono : MonoBehaviour
 {
-	public static PlayModeStateChange playmodeState;
 	public static Action<Vector2> OnScreenSizeChange;
-	public static PlayModeStateChange stateChange { get; set; }
 
-
-	private static bool staticAwakeAdded;
 	/// <summary>
 	/// Called once per class on game and editor awake, this should be assigned a static method
 	/// </summary>
@@ -24,11 +15,7 @@ public abstract class CustomMono : MonoBehaviour
 	{
 		CustomMonoHelper.onAssign += TryAssign;
 		CustomMonoHelper.onEditorAwake += TryOnEditorAwake;
-
-		if (staticAwakeAdded) { return; }
-
 		CustomMonoHelper.onClassAwake += () => onStaticAwake?.Invoke();
-		staticAwakeAdded = true;
 	}
 
 	private void TryAssign()
@@ -72,31 +59,35 @@ public abstract class CustomMono : MonoBehaviour
 	protected virtual void OnEditorAwake() {}
 }
 
-[InitializeOnLoad, DefaultExecutionOrder(-9999)]
+#if UNITY_EDITOR
+[InitializeOnLoad]
+#endif
+[DefaultExecutionOrder(-9999)]
 public static class CustomMonoHelper
 {
 	internal static Action onAssign, onEditorAwake, onClassAwake;
 	private static HashSet<CustomMono> monos;
 
+
+	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+	private static void PlayAwake()
+	{
+		Debug.Log("Player awake");
+		onAssign?.Invoke();
+		onClassAwake?.Invoke();
+	}
+
+#if UNITY_EDITOR
 	static CustomMonoHelper()
 	{
 		EditorApplication.playModeStateChanged += onModeChange;
 	}
 	private static void onModeChange(PlayModeStateChange state)
 	{
-		CustomMono.playmodeState = state;
 		if (state == PlayModeStateChange.EnteredEditMode)
 		{
 			EditorAwake();
 		}
-	}
-
-	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-	private static void PlayAwake()
-	{
-		// Debug.Log("Player awake");
-		onAssign?.Invoke();
-		onClassAwake?.Invoke();
 	}
 
 	[InitializeOnLoadMethod]
@@ -110,11 +101,11 @@ public static class CustomMonoHelper
 		}
 
 	}
+#endif
 	private static void EditorAwake()
 	{
 		// Debug.Log("Editor awake");
 		onAssign?.Invoke();
-		onClassAwake?.Invoke();
 		onEditorAwake?.Invoke();
 	}
 

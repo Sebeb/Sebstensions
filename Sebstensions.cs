@@ -1,10 +1,8 @@
 ﻿using System.Collections.Generic;
-using System.Collections;
 using System.IO;
 using System.Linq;
 using System;
 using UnityEditor;
-using UnityEngine.Internal;
 using UnityEngine.UI;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -12,7 +10,7 @@ using Random = UnityEngine.Random;
 
 public static class Seb
 {
-	public static Vector2 screenSize { get { return new Vector2(Screen.width, Screen.height); } }
+	public static Vector2 screenSize => new Vector2(Screen.width, Screen.height);
 
 #region Vectors
 	public static Vector2 XZ(this Vector3 input)
@@ -253,6 +251,8 @@ public static class Seb
 
 		return average / positions.Count();
 	}
+
+	public static float Lerp(this Vector2 vec, float t) => Mathf.Lerp(vec.x, vec.y, t);
 #endregion
 
 #region Transform
@@ -666,13 +666,34 @@ public static class Seb
 	// 	return bounds;
 	// }
 
-	public static Rect GetCornersWS(this Camera camera)
+	public static Rect GetCornersWs(this Camera camera, float z = 0)
 	{
-		Vector2 bottomLeft = camera.ScreenToWorldPoint(Vector2.zero);
-		Vector2 topRight
-			= camera.ScreenToWorldPoint(new Vector2(camera.pixelWidth, camera.pixelHeight));
+		if (camera.orthographic)
+		{
+			Vector2 bottomLeft = camera.ScreenToWorldPoint(Vector2.zero);
+			Vector2 topRight
+				= camera.ScreenToWorldPoint(new Vector2(camera.pixelWidth, camera.pixelHeight));
 
-		return new Rect(bottomLeft, topRight - bottomLeft);
+
+			return new Rect(bottomLeft, topRight - bottomLeft);
+		}
+		else
+		{
+			Vector3[] corners = new Vector3[4];
+			camera.CalculateFrustumCorners(
+
+				new Rect(0, 0, 1, 1), -camera.transform.position.z + z,
+				Camera.MonoOrStereoscopicEye.Mono, corners);
+
+			Vector3 bottomLeft = camera.transform.position +
+				camera.transform.TransformVector(corners[0]);
+
+			Vector3 topRight = camera.transform.position +
+				camera.transform.TransformVector(corners[2]);
+
+			return new Rect(bottomLeft, topRight - bottomLeft);
+		}
+
 	}
 #endregion
 

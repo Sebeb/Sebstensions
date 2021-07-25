@@ -2,15 +2,16 @@
 using NaughtyAttributes;
 using UnityEditor;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 [Serializable]
 public abstract class SettingsBox
 {
     [HideInInspector]
     public string name;
+#if UNITY_EDITOR
     [ReadOnly]
     public MonoScript parentScript;
+#endif
 
     public SettingsBox()
     {

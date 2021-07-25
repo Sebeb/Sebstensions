@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEditor;
 using UnityEngine;
 using Weaver;
-using Object = UnityEngine.Object;
 
 [DefaultExecutionOrder(-999)]
 public class SettingsManager : ScriptableObject

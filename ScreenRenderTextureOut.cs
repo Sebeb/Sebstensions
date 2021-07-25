@@ -1,6 +1,3 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using NaughtyAttributes;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
@@ -38,7 +35,7 @@ public class ScreenRenderTextureOut : MonoBehaviour
 
     private void BindRenderTexture()
     {
-        if (!cam) { return; }
+        if (!cam || Screen.width < 50) { return; }
 
         cam.targetTexture = preview = new RenderTexture((int)(Screen.width / downsampling),
             (int)(Screen.height / downsampling), 0, format);
