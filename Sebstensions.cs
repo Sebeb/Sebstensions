@@ -198,7 +198,8 @@ public static class Seb
 	public static Vector2 RandomTo(this Vector2 min, Vector2 max) =>
 		new Vector2(Random.Range(min.x, max.x), Random.Range(min.y, max.y));
 	public static float RandomRange(this Vector2 input) => Random.Range(input.x, input.y);
-	public static int RandomRange(this Vector2Int input) => Random.Range(input.x, input.y);
+	public static int RandomRange(this Vector2Int input, bool inclusive = false) =>
+		Random.Range(input.x, input.y + inclusive.AsInt());
 
 	public static Vector3 Modulo(this Vector3 a, Vector3 b) =>
 		new Vector3(a.x % b.x, a.y % b.y, a.z % b.z);
@@ -567,15 +568,30 @@ public static class Seb
 #region Collections
 	private static System.Random _random = new System.Random();
 
+	public static T GetWeightedRandom<T>(this IEnumerable<T> itemsEnumerable,
+		Func<T, int> weightKey)
+	{
+		List<T> items = itemsEnumerable.ToList();
+
+		int totalWeight = items.Sum(x => weightKey(x));
+		int randomWeightedIndex = _random.Next(totalWeight);
+		int itemWeightedIndex = 0;
+
+		if (!items.Any()) { return default; }
+
+		foreach (T item in items)
+		{
+			itemWeightedIndex += weightKey(item);
+			if (randomWeightedIndex < itemWeightedIndex)
+				return item;
+		}
+		throw new ArgumentException("Collection count and weights must be greater than 0");
+	}
+
 	public static T GetRandomOrDefault<T>(this IEnumerable<T> list)
 	{
-		// If there are no elements in the collection, return the default value of T
-		if (list.Count() == 0)
-		{
-			return default(T);
-		}
+		return !list.Any() ? default : list.ElementAt(_random.Next(list.Count()));
 
-		return list.ElementAt(_random.Next(list.Count()));
 	}
 
 	public static void TryRemove<T>(this List<T> list, T item)
@@ -681,7 +697,6 @@ public static class Seb
 		{
 			Vector3[] corners = new Vector3[4];
 			camera.CalculateFrustumCorners(
-
 				new Rect(0, 0, 1, 1), -camera.transform.position.z + z,
 				Camera.MonoOrStereoscopicEye.Mono, corners);
 
@@ -703,7 +718,7 @@ public static class Seb
 	{
 		return inclusive
 			? lower <= num && num <= upper
-			: lower < num && num < upper;
+			: lower <= num && num < upper;
 	}
 	public static bool LiesBetween(this float num, float lower, float upper, bool inclusive = false)
 	{
