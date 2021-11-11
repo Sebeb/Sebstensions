@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 using BestHTTP;
 using NaughtyAttributes;
 using TMPro;
@@ -9,52 +11,28 @@ using UnityCloudBuildAPI;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-[RequireComponent(typeof(TextMeshProUGUI))]
-public class VersionCheck : MonoBehaviour
+public class VersionCheck : SingletonMonoBehaviour<VersionCheck>
 {
+	public static string fullVersion => $"{Application.version}.{versionBuildNo}";
+	public static int versionBuildNo;
+	private static int cloudBuildNo = -1;
 	public bool checkItchUpdates, checkCloudBuildUpdates;
+	public VersionChangelog[] changelogs;
 	private string updateDownloadUrl;
 
 	public string projectId = "bc467bea-d2f1-4ef0-a457-9394732f11b5";
 	public string targetName = "windows-dev-build";
-
-	public struct VersionBuildChangelog
-	{
-		public string baseVersion;
-		public int buildNo, versionBuildNo;
-		public string[] changes;
-
-		public static VersionBuildChangelog[] FromCloudBuilds(CloudBuild[] builds)
-		{
-			List<VersionBuildChangelog> log = new List<VersionBuildChangelog>();
-			VersionBuildChangelog currentLog = new VersionBuildChangelog();
-			int versionBuildNo;
-
-			foreach (CloudBuild build in builds)
-			{
-				List<string> changes = new List<string>();
-				foreach (Changeset changeset in build.Changeset)
-				{
-					foreach (string changeLine in changeset.Message.Split('\n'))
-					{
-						if (changeLine.FirstOrDefault() == 'v')
-						{
-							currentLog.baseVersion = changeLine.Split(' ').First();
-						}
-					}
-				}
-			}
-		}
-	}
 
 	[ShowIf("checkItchUpdates")]
 	public string itchUpdateUrl =
 		"https://itch.io/api/1/x/wharf/latest?game_id=635733&channel_name=";
 
 	private string latestVersion, currentVersion;
+
+
 	private void Start()
 	{
-		DebugCorner.AddDebugText(-11, Application.version);
+		DebugCorner.AddDebugText(-11, fullVersion);
 		if (checkItchUpdates) { StartCoroutine(ItchUpdatesCheck()); }
 		if (checkCloudBuildUpdates) { UnityCloudUpdatesCheck(); }
 	}
@@ -88,9 +66,15 @@ public class VersionCheck : MonoBehaviour
 
 			if (!builds.Any()) { return; }
 
+			changelogs = VersionChangelog.FromCloudBuilds(builds);
+
 		#if UNITY_EDITOR
-			// buildNo = (int)builds.First().Build + 1;
-			// DebugCorner.AddDebugText(-11, fullVersion);
+			ExportVersion();
+			if (changelogs.Any())
+			{
+				versionBuildNo = changelogs.Last().baseVersion == Application.version
+					? changelogs.Last().buildNo + 1 : 0;
+			}
 		#endif
 
 			CloudBuild latestSuccessfulBuild =
@@ -116,9 +100,33 @@ public class VersionCheck : MonoBehaviour
 		}
 	}
 
-	public static void SetBuildNo(int no)
+#if UNITY_CLOUD_BUILD
+	public static void PreExport(UnityEngine.CloudBuild.BuildManifestObject manifest)
 	{
-		// Application.ver
+		cloudBuildNo = manifest.GetValue<int>("buildNumber");
+
+		StreamReader reader = new StreamReader(Application.dataPath + "/version~",
+			new UTF8Encoding(true));
+		string lastVersion = reader.ReadLine();
+		if (Application.version == lastVersion)
+		{
+			versionBuildNo = cloudBuildNo - int.Parse(reader.ReadLine());
+		}
+		else { versionBuildNo = 0; }
+	}
+#endif
+
+	public static void ExportVersion()
+	{
+		if (!_i.changelogs.Any()) { return; }
+
+		StreamWriter writer = new StreamWriter(Application.dataPath + "/version~", false,
+			new UTF8Encoding(true));
+		string latestVersion = _i.changelogs.Last().baseVersion;
+		writer.WriteLine(latestVersion);
+		writer.WriteLine(_i.changelogs.First(b => b.baseVersion == latestVersion).buildNo);
+
+		writer.Close();
 	}
 
 	private IEnumerator ItchUpdatesCheck()
@@ -176,6 +184,56 @@ public class VersionCheck : MonoBehaviour
 			&& UnityEngine.InputSystem.Keyboard.current.enterKey.wasPressedThisFrame)
 		{
 			Application.OpenURL(updateDownloadUrl);
+		}
+	}
+
+	[Serializable]
+	public struct VersionChangelog
+	{
+		public string baseVersion;
+		public int buildNo, versionBuildNo;
+		public string[] changes;
+		public string getVersionName => $"{baseVersion}.{buildNo}";
+
+		public static VersionChangelog[] FromCloudBuilds(CloudBuild[] builds)
+		{
+			List<VersionChangelog> log = new List<VersionChangelog>();
+			string currentBaseVersion = "";
+
+			foreach (CloudBuild build in builds.Where(b =>
+				b.Deleted == false && b.BuildStatus == "succeeded"))
+			{
+				VersionChangelog currentLog = new VersionChangelog
+					{ buildNo = (int)build.Build };
+				List<string> changes = new List<string>();
+				foreach (Changeset changeset in build.Changeset)
+				{
+					foreach (string commitMsg in changeset.Message.Split('\n'))
+					{
+						if (commitMsg.FirstOrDefault() == '('
+							&& commitMsg.LastOrDefault() == ')') { continue; }
+
+						if (commitMsg.FirstOrDefault() == 'v')
+						{
+							currentLog.baseVersion = commitMsg.Split(' ').First();
+							continue;
+						}
+
+						changes.Add(commitMsg);
+					}
+				}
+				if (string.IsNullOrEmpty(currentLog.baseVersion) && log.Any())
+				{
+					currentLog.baseVersion = log.Last().baseVersion;
+				}
+				if (log.Any() && log.Last().baseVersion == currentLog.baseVersion)
+				{
+					currentLog.versionBuildNo = log.Last().versionBuildNo + 1;
+				}
+				else { currentLog.versionBuildNo = 0; }
+			}
+
+			return log.ToArray();
 		}
 	}
 }
