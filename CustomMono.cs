@@ -5,7 +5,7 @@ using UnityEditor;
 
 public abstract class CustomMono : MonoBehaviour
 {
-	public static Action<Vector2> OnScreenSizeChange;
+	public static Action OnScreenSizeChange;
 
 	/// <summary>
 	/// Called once per class on game and editor awake, this should be assigned a static method

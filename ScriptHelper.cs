@@ -64,7 +64,7 @@ public class ScriptHelper : MonoBehaviour
     {
         if (Seb.screenSize != screenSize)
         {
-            CustomMono.OnScreenSizeChange?.Invoke(Seb.screenSize);
+            CustomMono.OnScreenSizeChange?.Invoke();
             screenSize = Seb.screenSize;
         }
     }

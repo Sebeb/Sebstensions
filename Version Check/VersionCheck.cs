@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using BestHTTP;
+using Menu;
 using NaughtyAttributes;
 using TMPro;
 using UnityCloudBuildAPI;
@@ -82,7 +83,7 @@ public partial class VersionCheck : SingletonMonoBehaviour<VersionCheck>
 			if (data.changelogs.Any())
 			{
 				data.versionBuildNo = data.changelogs.Last().baseVersion == Application.version
-					? data.changelogs.Last().buildNo + 1 : 1;
+					? data.changelogs.Last().buildNo + 1 : 0;
 			}
 			ExportVersion();
 		#endif
@@ -93,7 +94,7 @@ public partial class VersionCheck : SingletonMonoBehaviour<VersionCheck>
 			if (latestSuccessfulBuild == null) { return; }
 			print($"Latest successful build: {latestSuccessfulBuild}");
 
-			if (data.cloudBuildNo < (int)latestSuccessfulBuild.Build)
+			if (data.cloudBuildNo >=0 && data.cloudBuildNo < (int)latestSuccessfulBuild.Build)
 			{
 				DebugCorner.AddDebugText(-10,
 					"Update available. Press enter to open download link");
@@ -199,7 +200,7 @@ public partial class VersionCheck : SingletonMonoBehaviour<VersionCheck>
 	private void Update()
 	{
 		if (!string.IsNullOrEmpty(updateDownloadUrl)
-			&& UnityEngine.InputSystem.Keyboard.current.enterKey.wasPressedThisFrame)
+			&& Keyboard.current.enterKey.wasPressedThisFrame)
 		{
 			Application.OpenURL(updateDownloadUrl);
 		}

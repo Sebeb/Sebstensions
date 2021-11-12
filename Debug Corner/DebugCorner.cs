@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 [DefaultExecutionOrder(-200)]
 public class DebugCorner : SingletonMonoBehaviour<DebugCorner>
@@ -13,9 +11,8 @@ public class DebugCorner : SingletonMonoBehaviour<DebugCorner>
 	
 	private static SortedDictionary<int, string> debugTexts = new SortedDictionary<int, string>();
 
-	private void Awake()
+	private void Start()
 	{
-		_i.tmp = GetComponent<TextMeshProUGUI>();
 		_i.tmp.enabled = PlayerPrefs.GetInt("showDebugCorner", 1) == 1;
 	}
 
@@ -66,7 +63,7 @@ public class DebugCorner : SingletonMonoBehaviour<DebugCorner>
 	private void Update()
 	{
 		//Toggle visible with F2
-		if (UnityEngine.InputSystem.Keyboard.current.f2Key.wasPressedThisFrame)
+		if (Keyboard.current.f2Key.wasPressedThisFrame)
 		{
 			tmp.enabled = !tmp.enabled;
 			PlayerPrefs.SetInt("showDebugCorner", tmp.enabled.AsInt());
