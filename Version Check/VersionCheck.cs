@@ -228,18 +228,25 @@ public class VersionCheck : SingletonMonoBehaviour<VersionCheck>
 				List<string> changes = new List<string>();
 				foreach (Changeset changeset in build.Changeset)
 				{
-					foreach (string commitMsg in changeset.Message.Split('\n'))
-					{
-						if (commitMsg.FirstOrDefault() == '('
-							&& commitMsg.LastOrDefault() == ')') { continue; }
+					if (string.IsNullOrEmpty(changeset.Message)) { continue; }
 
-						if (commitMsg.FirstOrDefault() == 'v')
+					string[] commitMsgLines = changeset.Message.Split('\n');
+					for (int i = 0; i < commitMsgLines.Length; i++)
+					{
+						string commitMsg = commitMsgLines[i];
+						if (i == 0)
 						{
-							currentLog.baseVersion = commitMsg.Split(' ').First();
-							continue;
+							switch (commitMsg.FirstOrDefault())
+							{
+								case '(' when commitMsg.LastOrDefault() == ')': continue;
+								case 'v':
+									currentLog.baseVersion = commitMsg.Split(' ').First();
+									continue;
+							}
+
 						}
 
-						changes.Add(commitMsg);
+						if (commitMsg.FirstOrDefault() != '~') { changes.Add(commitMsg); }
 					}
 				}
 				currentLog.changes = changes.ToArray();
