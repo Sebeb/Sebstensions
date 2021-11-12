@@ -11,17 +11,17 @@ using UnityCloudBuildAPI;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+[ExecuteInEditMode]
 public class VersionCheck : SingletonMonoBehaviour<VersionCheck>
 {
-	public static string fullVersion => $"{Application.version}.{versionBuildNo}";
-	public static int versionBuildNo;
-	private static int cloudBuildNo = -1;
+	static VersionData data => VersionData._i;
 	public bool checkItchUpdates, checkCloudBuildUpdates;
 	public VersionChangelog[] changelogs;
 	private string updateDownloadUrl;
 
-	public string projectId = "bc467bea-d2f1-4ef0-a457-9394732f11b5";
-	public string targetName = "windows-dev-build";
+	[Header("Unity Cloud Build")]
+	[ShowIf("checkCloudBuildUpdates")] public long orgId;
+	[ShowIf("checkCloudBuildUpdates")] public string projectId, targetName;
 
 	[ShowIf("checkItchUpdates")]
 	public string itchUpdateUrl =
@@ -32,7 +32,7 @@ public class VersionCheck : SingletonMonoBehaviour<VersionCheck>
 
 	private void Start()
 	{
-		DebugCorner.AddDebugText(-11, fullVersion);
+		DebugCorner.AddDebugText(-11, data.fullVersion, allowInEditor: true);
 		if (checkItchUpdates) { StartCoroutine(ItchUpdatesCheck()); }
 		if (checkCloudBuildUpdates) { UnityCloudUpdatesCheck(); }
 	}
@@ -42,7 +42,7 @@ public class VersionCheck : SingletonMonoBehaviour<VersionCheck>
 	{
 		HTTPRequest req = new HTTPRequest(
 			new Uri(
-				$"https://build-api.cloud.unity3d.com/api/v1/orgs/5772939966982/projects/{projectId}/buildtargets/{targetName}/builds"),
+				$"https://build-api.cloud.unity3d.com/api/v1/orgs/{orgId}/projects/{projectId}/buildtargets/{targetName}/builds"),
 			onReceiveBuilds);
 
 		req.AddHeader("Content-Type", "application/json");
@@ -58,23 +58,35 @@ public class VersionCheck : SingletonMonoBehaviour<VersionCheck>
 				DebugCorner.AddDebugText(-10, "Error checking cloud build for updates", 5);
 			}
 
-			CloudBuild[] builds = CloudBuild.FromJson(resp.DataAsText);
+			CloudBuild[] builds;
+			try
+			{
+				builds = CloudBuild.FromJson(resp.DataAsText);
+
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e);
+				Debug.Log(resp.DataAsText);
+				throw;
+			}
+			if (!builds.Any()) { return; }
+
 			builds = builds.OrderByDescending(b => b.Created).ToArray();
 			print(
 				"All available builds: " +
 				string.Join("\n", builds.Select(b => b.ToString())));
 
-			if (!builds.Any()) { return; }
 
 			changelogs = VersionChangelog.FromCloudBuilds(builds);
 
 		#if UNITY_EDITOR
-			ExportVersion();
 			if (changelogs.Any())
 			{
-				versionBuildNo = changelogs.Last().baseVersion == Application.version
-					? changelogs.Last().buildNo + 1 : 0;
+				data.versionBuildNo = changelogs.Last().baseVersion == Application.version
+					? changelogs.Last().buildNo + 1 : 1;
 			}
+			ExportVersion();
 		#endif
 
 			CloudBuild latestSuccessfulBuild =
@@ -83,49 +95,57 @@ public class VersionCheck : SingletonMonoBehaviour<VersionCheck>
 			if (latestSuccessfulBuild == null) { return; }
 			print($"Latest successful build: {latestSuccessfulBuild}");
 
-			// if (buildNo < (int)latestSuccessfulBuild.Build)
-			// {
-			// 	DebugCorner.AddDebugText(-10,
-			// 		"Update available. Press enter to open download link");
-			// 	updateDownloadUrl = latestSuccessfulBuild.Links.DownloadPrimary.Href.ToString();
-			// }
-			// else if (buildNo == (int)latestSuccessfulBuild.Build)
-			// {
-			// 	DebugCorner.AddDebugText(-10, "Up to date!", 5);
-			// }
-			// else
-			// {
-			// 	DebugCorner.AddDebugText(-10, "In the future.", 5);
-			// }
+			if (data.cloudBuildNo < (int)latestSuccessfulBuild.Build)
+			{
+				DebugCorner.AddDebugText(-10,
+					"Update available. Press enter to open download link");
+				updateDownloadUrl = latestSuccessfulBuild.Links.DownloadPrimary.Href.ToString();
+			}
+			else if (data.cloudBuildNo == (int)latestSuccessfulBuild.Build)
+			{
+				DebugCorner.AddDebugText(-10, "Up to date!", 3);
+			}
+			else
+			{
+				DebugCorner.AddDebugText(-10, "In the future.", 3);
+			}
+			DebugCorner.AddDebugText(-11, data.fullVersion, allowInEditor: true);
 		}
 	}
 
 #if UNITY_CLOUD_BUILD
 	public static void PreExport(UnityEngine.CloudBuild.BuildManifestObject manifest)
 	{
-		cloudBuildNo = manifest.GetValue<int>("buildNumber");
+		data.cloudBuildNo = manifest.GetValue<int>("buildNumber");
 
 		StreamReader reader = new StreamReader(Application.dataPath + "/version~",
 			new UTF8Encoding(true));
 		string lastVersion = reader.ReadLine();
 		if (Application.version == lastVersion)
 		{
-			versionBuildNo = cloudBuildNo - int.Parse(reader.ReadLine());
+			data.versionBuildNo = int.Parse(reader.ReadLine());
 		}
-		else { versionBuildNo = 0; }
+		else { data.versionBuildNo = 1; }
+		print($"Version number set to {data.versionBuildNo}");
 	}
 #endif
 
 	public static void ExportVersion()
 	{
-		if (!_i.changelogs.Any()) { return; }
-
 		StreamWriter writer = new StreamWriter(Application.dataPath + "/version~", false,
 			new UTF8Encoding(true));
-		string latestVersion = _i.changelogs.Last().baseVersion;
-		writer.WriteLine(latestVersion);
-		writer.WriteLine(_i.changelogs.First(b => b.baseVersion == latestVersion).buildNo);
 
+		if (!_i.changelogs.Any())
+		{
+			writer.WriteLine(Application.version);
+			writer.WriteLine('0');
+		}
+		else
+		{
+			string latestVersion = _i.changelogs.Last().baseVersion;
+			writer.WriteLine(latestVersion);
+			writer.WriteLine(_i.changelogs.First(b => b.baseVersion == latestVersion).buildNo);
+		}
 		writer.Close();
 	}
 
@@ -201,7 +221,7 @@ public class VersionCheck : SingletonMonoBehaviour<VersionCheck>
 			string currentBaseVersion = "";
 
 			foreach (CloudBuild build in builds.Where(b =>
-				b.Deleted == false && b.BuildStatus == "succeeded"))
+				b.Deleted == false && b.BuildStatus == "success"))
 			{
 				VersionChangelog currentLog = new VersionChangelog
 					{ buildNo = (int)build.Build };
@@ -222,6 +242,7 @@ public class VersionCheck : SingletonMonoBehaviour<VersionCheck>
 						changes.Add(commitMsg);
 					}
 				}
+				currentLog.changes = changes.ToArray();
 				if (string.IsNullOrEmpty(currentLog.baseVersion) && log.Any())
 				{
 					currentLog.baseVersion = log.Last().baseVersion;
@@ -231,6 +252,7 @@ public class VersionCheck : SingletonMonoBehaviour<VersionCheck>
 					currentLog.versionBuildNo = log.Last().versionBuildNo + 1;
 				}
 				else { currentLog.versionBuildNo = 0; }
+				log.Add(currentLog);
 			}
 
 			return log.ToArray();

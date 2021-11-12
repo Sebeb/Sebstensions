@@ -6,23 +6,22 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 [DefaultExecutionOrder(-200)]
-public class DebugCorner : MonoBehaviour
+public class DebugCorner : SingletonMonoBehaviour<DebugCorner>
 {
-	private static TextMeshProUGUI tmp;
+	[Header("References")]
+	public TextMeshProUGUI tmp;
+	
 	private static SortedDictionary<int, string> debugTexts = new SortedDictionary<int, string>();
-	private Canvas canvas;
-	private static DebugCorner instance;
 
 	private void Awake()
 	{
-		tmp = GetComponent<TextMeshProUGUI>();
-		instance = this;
-		tmp.enabled = PlayerPrefs.GetInt("showDebugCorner", 1) == 1;
+		_i.tmp = GetComponent<TextMeshProUGUI>();
+		_i.tmp.enabled = PlayerPrefs.GetInt("showDebugCorner", 1) == 1;
 	}
 
-	public static void AddDebugText(int key, string text, float removeTime = -1)
+	public static void AddDebugText(int key, string text, float removeTime = -1, bool allowInEditor = false)
 	{
-		if (!Application.isPlaying)
+		if (!Application.isPlaying && !allowInEditor)
 		{
 			Debug.Log(text);
 			return;
@@ -35,7 +34,7 @@ public class DebugCorner : MonoBehaviour
 
 		if (removeTime > 0)
 		{
-			instance.StartCoroutine(instance.TimedRemove(key, removeTime));
+			_i.StartCoroutine(_i.TimedRemove(key, removeTime));
 		}
 	}
 
@@ -56,11 +55,11 @@ public class DebugCorner : MonoBehaviour
 
 	private static void RedrawText()
 	{
-		tmp.text = "";
+		_i.tmp.text = "";
 		foreach (string debugText in debugTexts.Values)
 		{
-			tmp.text += debugText;
-			tmp.text += "\n";
+			_i.tmp.text += debugText;
+			_i.tmp.text += "\n";
 		}
 	}
 
@@ -82,10 +81,10 @@ public class DebugCorner : MonoBehaviour
 
 	// private IEnumerator TakeScreenshot()
 	// {
-	// 	bool debugDisplayed = tmp.enabled;
+	// 	bool debugDisplayed = _i.tmp.enabled;
 	// 	if (debugDisplayed)
 	// 	{
-	// 		tmp.enabled = false;
+	// 		_i.tmp.enabled = false;
 	// 		yield return null;
 	// 	}
 	// 	Game.cursor.Disable();
@@ -105,7 +104,7 @@ public class DebugCorner : MonoBehaviour
 	//
 	// 	yield return new WaitForSeconds(0.5f);
 	//
-	// 	if (debugDisplayed) { tmp.enabled = true; }
+	// 	if (debugDisplayed) { _i.tmp.enabled = true; }
 	// 	Game.cursor.Enable();
 	// }
 }
