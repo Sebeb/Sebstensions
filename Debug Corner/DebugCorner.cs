@@ -8,7 +8,7 @@ public class DebugCorner : SingletonMonoBehaviour<DebugCorner>
 {
 	[Header("References")]
 	public TextMeshProUGUI tmp;
-	
+
 	private static SortedDictionary<int, string> debugTexts = new SortedDictionary<int, string>();
 
 	private void Start()
@@ -16,9 +16,11 @@ public class DebugCorner : SingletonMonoBehaviour<DebugCorner>
 		_i.tmp.enabled = PlayerPrefs.GetInt("showDebugCorner", 1) == 1;
 	}
 
-	public static void AddDebugText(int key, string text, float removeTime = -1, bool allowInEditor = false)
+	public static void AddDebugText(int key, string text, float removeTime = -1,
+		bool allowInEditor = false)
 	{
-		if (!Application.isPlaying && !allowInEditor)
+		if (!Application.isPlaying && !allowInEditor
+			|| _i == null || _i.tmp == null)
 		{
 			Debug.Log(text);
 			return;
