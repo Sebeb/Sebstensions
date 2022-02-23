@@ -4,9 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using BestHTTP;
-using Menu;
 using NaughtyAttributes;
-using TMPro;
 using UnityCloudBuildAPI;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -219,7 +217,6 @@ public partial class VersionCheck : SingletonMonoBehaviour<VersionCheck>
 namespace UnityCloudBuildAPI
 {
 	using System;
-	using System.Collections.Generic;
 	using System.Globalization;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Converters;

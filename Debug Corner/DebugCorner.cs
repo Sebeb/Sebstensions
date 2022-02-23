@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 [DefaultExecutionOrder(-200)]
 public class DebugCorner : SingletonMonoBehaviour<DebugCorner>
