@@ -1,0 +1,19 @@
+{
+    "name": "SebEditor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:f88fb04354076c646a4107a491394033",
+        "GUID:d59ee8b0ddcb6b84aaed49c88e33675f"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

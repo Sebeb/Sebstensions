@@ -254,7 +254,8 @@ public static class Seb
 	}
 
 	public static float Lerp(this Vector2 vec, float t) => Mathf.Lerp(vec.x, vec.y, t);
-	public static float InverseLerp(this Vector2 vec, float t) => Mathf.InverseLerp(vec.x, vec.y, t);
+	public static float InverseLerp(this Vector2 vec, float t) =>
+		Mathf.InverseLerp(vec.x, vec.y, t);
 #endregion
 
 #region Transform
@@ -415,7 +416,10 @@ public static class Seb
 			if (i < spaces.Count - 1) { word = word.Remove(spaces[i + 1] - c); }
 
 			if (NoCapitalize.Any(s =>
-				String.Equals(s, word, StringComparison.CurrentCultureIgnoreCase))) { continue; }
+				    String.Equals(s, word, StringComparison.CurrentCultureIgnoreCase)))
+			{
+				continue;
+			}
 
 			@in = @in.Insert(c, Char.ToUpper(@in[c]).ToString());
 			@in = @in.Remove(c + 1, 1);
@@ -1152,7 +1156,7 @@ public class Bictionary<T1, T2> : Dictionary<T1, T2>
 }
 
 [Serializable]
-public struct TransformStruct
+public struct Transformation
 {
 
 	public Vector3 position;
@@ -1164,42 +1168,49 @@ public struct TransformStruct
 	}
 	public Vector3 scale;
 
-	public TransformStruct(Vector3 position, Quaternion rotation, Vector3 scale)
+	public Transformation(Vector3 position, Quaternion rotation, Vector3 scale)
 	{
 		this.position = position;
 		this.rotation = rotation;
 		this.scale = scale;
 	}
 
-	public TransformStruct(Vector3 position, Quaternion rotation)
+	public Transformation(Vector3 position, Quaternion rotation)
 	{
 		this.position = position;
 		this.rotation = rotation;
 		this.scale = Vector3.one;
 	}
 
-	public TransformStruct(Vector3 position)
+	public Transformation(Vector3 position)
 	{
 		this.position = position;
 		this.rotation = Quaternion.identity;
 		this.scale = Vector3.one;
 	}
 
-	public TransformStruct(Quaternion rotation)
+	public Transformation(Quaternion rotation)
 	{
 		this.position = Vector3.zero;
 		this.rotation = rotation;
 		this.scale = Vector3.one;
 	}
 
-	public static TransformStruct operator+(TransformStruct a, TransformStruct b) =>
-		new TransformStruct(a.position + b.position, a.rotation * b.rotation,
+	public Transformation(Transform transform, Space space = Space.Self)
+	{
+		position = space == Space.Self ? transform.localPosition : transform.position;
+		rotation = space == Space.Self ? transform.localRotation : transform.rotation;
+		scale = space == Space.Self ? transform.localScale : transform.lossyScale;
+	}
+
+	public static Transformation operator+(Transformation a, Transformation b) =>
+		new Transformation(a.position + b.position, a.rotation * b.rotation,
 			a.scale.Multiply(b.scale));
 }
 
 public static class TransformStructOverride
 {
-	public static void Set(this Transform t, TransformStruct @struct, Space space = Space.Self)
+	public static void Set(this Transform t, Transformation @struct, Space space = Space.Self)
 	{
 		if (space == Space.Self)
 		{
@@ -1215,7 +1226,7 @@ public static class TransformStructOverride
 		}
 	}
 
-	public static void Apply(this Transform t, TransformStruct @struct, Space space = Space.Self)
+	public static void Apply(this Transform t, Transformation @struct, Space space = Space.Self)
 	{
 		if (space == Space.Self)
 		{

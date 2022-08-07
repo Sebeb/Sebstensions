@@ -5,11 +5,8 @@ using UnityEngine;
 using Weaver;
 
 [DefaultExecutionOrder(-999)]
-public class SettingsManager : ScriptableObject
+public class SettingsManager : SingletonScriptableObject<SettingsManager>
 {
-    [AssetReference]
-    public static SettingsManager _i;
-
     [SerializeReference]
     public List<SettingsBox> boxes = new List<SettingsBox>();
     public static Dictionary<Type, dynamic> boxDic;

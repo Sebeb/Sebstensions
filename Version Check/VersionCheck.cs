@@ -29,7 +29,7 @@ public partial class VersionCheck : SingletonMonoBehaviour<VersionCheck>
 
 	private void Start()
 	{
-		DebugCorner.AddDebugText(-11, data.fullVersion, allowInEditor: true);
+		DebugHUD.AddCornerText(-11, data.fullVersion, allowInEditor: true);
 		if (checkItchUpdates) { StartCoroutine(ItchUpdatesCheck()); }
 		if (checkCloudBuildUpdates) { UnityCloudUpdatesCheck(); }
 	}
@@ -46,13 +46,13 @@ public partial class VersionCheck : SingletonMonoBehaviour<VersionCheck>
 		req.AddHeader("Authorization", "Basic e8b2369b3ec2b0e69fd4273a70e4f79a");
 		req.Send();
 
-		DebugCorner.AddDebugText(-10, "Checking cloud build for updates...");
+		DebugHUD.AddCornerText(-10, "Checking cloud build for updates...");
 
 		void onReceiveBuilds(HTTPRequest req, HTTPResponse resp)
 		{
 			if (!resp.IsSuccess)
 			{
-				DebugCorner.AddDebugText(-10, "Error checking cloud build for updates", 5);
+				DebugHUD.AddCornerText(-10, "Error checking cloud build for updates", 5);
 			}
 
 			CloudBuild[] builds;
@@ -94,19 +94,19 @@ public partial class VersionCheck : SingletonMonoBehaviour<VersionCheck>
 
 			if (data.cloudBuildNo >=0 && data.cloudBuildNo < (int)latestSuccessfulBuild.Build)
 			{
-				DebugCorner.AddDebugText(-10,
+				DebugHUD.AddCornerText(-10,
 					"Update available. Press enter to open download link");
 				updateDownloadUrl = latestSuccessfulBuild.Links.DownloadPrimary.Href.ToString();
 			}
 			else if (data.cloudBuildNo == (int)latestSuccessfulBuild.Build)
 			{
-				DebugCorner.AddDebugText(-10, "Up to date!", 3);
+				DebugHUD.AddCornerText(-10, "Up to date!", 3);
 			}
 			else
 			{
-				DebugCorner.AddDebugText(-10, "In the future.", 3);
+				DebugHUD.AddCornerText(-10, "In the future.", 3);
 			}
-			DebugCorner.AddDebugText(-11, data.fullVersion, allowInEditor: true);
+			DebugHUD.AddCornerText(-11, data.fullVersion, allowInEditor: true);
 		}
 	}
 
@@ -159,7 +159,7 @@ public partial class VersionCheck : SingletonMonoBehaviour<VersionCheck>
 		if (string.IsNullOrEmpty(download.error))
 		{
 
-			DebugCorner.AddDebugText(-11, Application.version + " - checking for updates...");
+			DebugHUD.AddCornerText(-11, Application.version + " - checking for updates...");
 			string[] rawVersion = download.text.Split('"');
 
 			if (!rawVersion[1].Equals("latest"))
@@ -173,18 +173,18 @@ public partial class VersionCheck : SingletonMonoBehaviour<VersionCheck>
 			if (latestVersion != Application.version)
 			{
 				print(latestVersion);
-				DebugCorner.AddDebugText(-11, Application.version
+				DebugHUD.AddCornerText(-11, Application.version
 					+ "\nversion " + latestVersion + " available.");
 				yield break;
 			}
 			else
 			{
-				DebugCorner.AddDebugText(-11, Application.version + " - up-to-date.");
+				DebugHUD.AddCornerText(-11, Application.version + " - up-to-date.");
 			}
 		}
 		else
 		{
-			DebugCorner.AddDebugText(-11, Application.version + " - error checking for updates.");
+			DebugHUD.AddCornerText(-11, Application.version + " - error checking for updates.");
 		}
 
 		yield return new WaitForSeconds(5);
