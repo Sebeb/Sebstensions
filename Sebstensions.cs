@@ -2,11 +2,16 @@
 using System.IO;
 using System.Linq;
 using System;
-using UnityEditor;
+using System.Runtime.Serialization;
+using System.Text.RegularExpressions;
+using Mono.Collections.Generic;
 using UnityEngine.UI;
 using UnityEngine;
-using Object = UnityEngine.Object;
-using Random = UnityEngine.Random;
+using Object=UnityEngine.Object;
+using Random=UnityEngine.Random;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public static class Seb
 {
@@ -18,7 +23,7 @@ public static class Seb
 		return new Vector2(input.x, input.z);
 	}
 
-	public static Vector3 Y2Z(this Vector2 input, float newY)
+	public static Vector3 Y2Z(this Vector2 input, float newY = 0)
 	{
 		return new Vector3(input.x, newY, input.y);
 	}
@@ -60,9 +65,11 @@ public static class Seb
 		new Vector2(input.x.CapMax(value), input.y.CapMax(value));
 	public static Vector2 CapMin(this Vector2 input, float value) =>
 		new Vector2(input.x.CapMin(value), input.y.CapMin(value));
+	public static Vector2 CapMin(this Vector2 input, float xMin, float yMin) =>
+		new Vector2(input.x.CapMin(xMin), input.y.CapMin(yMin));
 	public static Vector2 Multiply(this Vector2 input, Vector2 value) =>
 		new Vector2(input.x * value.x, input.y * value.y);
-	public static Vector2 Divide(this Vector2 input, Vector2 value) =>
+	public static Vector2 DivideComponents(this Vector2 input, Vector2 value) =>
 		new Vector2(input.x / value.x, input.y / value.y);
 
 	public static Vector3 SetX(this Vector3 input, float value) =>
@@ -73,8 +80,7 @@ public static class Seb
 		new Vector3(input.x, input.y, value);
 	public static Vector3 SetMagnitude(this Vector3 input, float value) =>
 		new Vector3(input.x, input.y, input.z).normalized * value;
-	public static Vector3 SetZ(this Vector2 input, float value) =>
-		new Vector3(input.x, input.y, value);
+	public static Vector3 SetZ(this Vector2 input, float z) => new Vector3(input.x, input.y, z);
 	public static Vector3 MoveX(this Vector3 input, float value) =>
 		new Vector3(input.x + value, input.y, input.z);
 	public static Vector3 MoveY(this Vector3 input, float value) =>
@@ -198,8 +204,8 @@ public static class Seb
 	public static Vector2 RandomTo(this Vector2 min, Vector2 max) =>
 		new Vector2(Random.Range(min.x, max.x), Random.Range(min.y, max.y));
 	public static float RandomRange(this Vector2 input) => Random.Range(input.x, input.y);
-	public static int RandomRange(this Vector2Int input, bool inclusive = false) =>
-		Random.Range(input.x, input.y + inclusive.AsInt());
+	public static int RandomRange(this Vector2Int input, bool maxInclusive = false) =>
+		Random.Range(input.x, input.y + maxInclusive.AsInt());
 
 	public static Vector3 Modulo(this Vector3 a, Vector3 b) =>
 		new Vector3(a.x % b.x, a.y % b.y, a.z % b.z);
@@ -224,61 +230,134 @@ public static class Seb
 		return 360 - angle;
 	}
 
-	public static Vector3 GetMeanVector(this IEnumerable<Vector3> positions)
+	public static Vector3 Average(this IEnumerable<Vector3> input) =>
+		input.Aggregate(new Vector3(0, 0, 0), (s, v) => s + v) / input.Count();
+
+	public static Vector3 Round(this Vector3 vector3, int decimalPlaces = 2)
 	{
-		if (!positions.Any()) { return Vector3.zero; }
-
-		Vector3 average = new Vector3();
-		foreach (Vector3 pos in positions)
+		float multiplier = 1;
+		for (int i = 0; i < decimalPlaces; i++)
 		{
-			average.x += pos.x;
-			average.y += pos.y;
-			average.z += pos.z;
+			multiplier *= 10f;
 		}
-
-		return average / positions.Count();
+		return new Vector3(
+			Mathf.Round(vector3.x * multiplier) / multiplier,
+			Mathf.Round(vector3.y * multiplier) / multiplier,
+			Mathf.Round(vector3.z * multiplier) / multiplier);
 	}
 
-	public static Vector2 GetMeanVector(this IEnumerable<Vector2> positions)
+	public static Vector2 Round(this Vector2 vector3, int decimalPlaces = 2)
 	{
-		if (!positions.Any()) { return Vector2.zero; }
-
-		Vector2 average = new Vector2();
-		foreach (Vector2 pos in positions)
+		float multiplier = 1;
+		for (int i = 0; i < decimalPlaces; i++)
 		{
-			average.x += pos.x;
-			average.y += pos.y;
+			multiplier *= 10f;
 		}
-
-		return average / positions.Count();
+		return new Vector2(
+			Mathf.Round(vector3.x * multiplier) / multiplier,
+			Mathf.Round(vector3.y * multiplier) / multiplier);
 	}
+
+	public static float Round(this float input, int decimalPlaces = 2)
+	{
+		float multiplier = 1;
+		for (int i = 0; i < decimalPlaces; i++)
+		{
+			multiplier *= 10f;
+		}
+		return
+			Mathf.Round(input * multiplier) / multiplier;
+	}
+
 
 	public static float Lerp(this Vector2 vec, float t) => Mathf.Lerp(vec.x, vec.y, t);
 	public static float InverseLerp(this Vector2 vec, float t) =>
 		Mathf.InverseLerp(vec.x, vec.y, t);
 #endregion
 
-#region Transform
-	public static void ResetLS(this Transform input)
+#region Rect Transform
+	public static Bounds CalculateBounds(this RectTransform rectT, Space space = Space.World)
 	{
-		input.localPosition = Vector3.zero;
-		input.localRotation = Quaternion.identity;
-		input.localScale = Vector3.one;
+		Bounds bounds = new Bounds(rectT.position,
+			new Vector3(rectT.rect.width, rectT.rect.height, 0.0f));
+
+		foreach (RectTransform rectTChild in
+		         rectT.gameObject.GetComponentsInChildren<RectTransform>())
+		{
+			Bounds childBounds = new Bounds(rectTChild.position,
+				new Vector3(rectTChild.rect.width, rectTChild.rect.height, 0.0f));
+			bounds.Encapsulate(childBounds);
+		}
+
+		if (space == Space.Self)
+		{
+			bounds.center = rectT.InverseTransformPoint(bounds.center);
+		}
+
+		return bounds;
 	}
-	public static void ResetWS(this Transform input)
+#endregion
+
+#region MeshRenderer
+	public static Bounds CalculateMeshBounds(this GameObject obj, Space space = Space.World)
 	{
-		input.position = Vector3.zero;
-		input.rotation = Quaternion.identity;
-		input.localScale = Vector3.one;
+		MeshRenderer rend = obj.GetComponent<MeshRenderer>();
+		Bounds bounds = rend != null
+			? space == Space.World ? rend.bounds : rend.localBounds
+			: new Bounds();
+
+		bounds.Encapsulate(rend.GetComponentsInChildren<MeshRenderer>().CalculateMeshBounds(space));
+
+		return bounds;
+	}
+
+	public static Bounds CalculateMeshBounds(this MeshRenderer[] meshes, Space space = Space.World)
+	{
+		if (meshes == null || meshes.Length == 0)
+		{
+			return new Bounds(Vector3.negativeInfinity, Vector3.zero);
+		}
+
+		Bounds ret = space == Space.World ? meshes.First().bounds : meshes.First().localBounds;
+
+		foreach (MeshRenderer mesh in meshes.Skip(1))
+		{
+			ret.Encapsulate(space == Space.World ? mesh.bounds : mesh.localBounds);
+		}
+		return ret;
+	}
+#endregion
+
+#region Transform
+	public static void Reset(this Transform input, Space space = Space.Self)
+	{
+		if (space == Space.Self)
+		{
+			input.localPosition = Vector3.zero;
+			input.localRotation = Quaternion.identity;
+			input.localScale = Vector3.one;
+		}
+		else
+		{
+			input.position = Vector3.zero;
+			input.rotation = Quaternion.identity;
+			input.localScale = Vector3.one;
+		}
 	}
 
 	public static void CopyFrom(this Transform to, Transform from, bool includeParent = true)
 	{
-		if (includeParent) to.parent = from.parent;
+		if (includeParent) { to.parent = from.parent; }
 		to.position = from.position;
 		to.localScale = from.localScale;
 		to.rotation = from.rotation;
 		to.SetSiblingIndex(from.GetSiblingIndex());
+	}
+
+	public static Transform GetSceneLevelParent(this Transform t)
+	{
+		while (t.parent != null) { t = t.parent; }
+		return t;
 	}
 
 	public static Transform GetNthParent(this Transform t, int levels)
@@ -293,24 +372,24 @@ public static class Seb
 		return parent;
 	}
 
-	public static Transform[] GetChildren(this Transform trans)
+	public static IEnumerable<Transform> GetChildren(this Transform trans)
 	{
 		List<Transform> list = new List<Transform>();
 		for (int i = 0; i < trans.childCount; i++)
 		{
 			list.Add(trans.GetChild(i));
 		}
-		return list.ToArray();
+		return list;
 	}
 
-	public static GameObject[] GetChildren(this GameObject go)
+	public static IEnumerable<GameObject> GetChildren(this GameObject go)
 	{
 		List<GameObject> list = new List<GameObject>();
 		for (int i = 0; i < go.transform.childCount; i++)
 		{
 			list.Add(go.transform.GetChild(i).gameObject);
 		}
-		return list.ToArray();
+		return list;
 	}
 
 	public static void DestroyChildren(this Transform trans)
@@ -318,15 +397,24 @@ public static class Seb
 		int childs = trans.childCount;
 		for (int i = childs - 1; i >= 0; i--)
 		{
-			trans.GetChild(i).gameObject.EditorSafeDestroy();
+			trans.GetChild(i).gameObject.Destroy();
 		}
 	}
 
-	public static void EditorSafeDestroy(this GameObject _go)
+	public static void Destroy(this Object _go)
 	{
-		if (Application.isPlaying) { GameObject.Destroy(_go); }
-		else { GameObject.DestroyImmediate(_go); }
+		if (Application.isPlaying) { Object.Destroy(_go); }
+		else { Object.DestroyImmediate(_go); }
 	}
+	public static Quaternion InverseTransformRotation(this Transform trans,
+		Quaternion worldRotation) =>
+		Quaternion.Inverse(trans.rotation) * worldRotation;
+
+	public static IEnumerable<Transform> GetChildrenWithTag(this Transform parent, string tag,
+		bool allowGrandChildren = false) =>
+		(allowGrandChildren ? parent.GetComponentsInChildren<Transform>(includeInactive: true)
+			: parent.GetChildren())
+		.Where(t => t.gameObject.CompareTag(tag));
 #endregion
 
 #region String
@@ -339,13 +427,14 @@ public static class Seb
 		else return input;
 	}
 
-	public static string MakeFilename(this string input, int maxLength = -1)
+	public static string MakeFilename(this string input, int maxLength = -1,
+		string extension = null)
 	{
 		input = input.TrimStart();
 		input = input.Replace('.', '_');
 		while (true)
 		{
-			int removeAt = input.IndexOfAny(System.IO.Path.GetInvalidFileNameChars());
+			int removeAt = input.IndexOfAny(Path.GetInvalidFileNameChars());
 			if (removeAt == -1) { break; }
 			else { input = input.Remove(removeAt, 1); }
 		}
@@ -366,7 +455,7 @@ public static class Seb
 		return source.IndexOf(toCheck, comp) >= 0;
 	}
 
-	//https://social.msdn.microsoft.com/Forums/vstudio/en-US/791963c8-9e20-4e9e-b184-f0e592b943b0/split-a-camel-case-string?forum=csharpgeneral
+//https://social.msdn.microsoft.com/Forums/vstudio/en-US/791963c8-9e20-4e9e-b184-f0e592b943b0/split-a-camel-case-string?forum=csharpgeneral
 	public static string NormalizeCamel(this string input)
 	{
 		string words = string.Empty;
@@ -537,6 +626,33 @@ public static class Seb
 
 	public static float GetWhitespaceRatio(this string input) =>
 		(float)input.Count(c => !Char.IsWhiteSpace(c)) / (float)input.Length;
+
+	public static string AddOrdinal(this int num)
+	{
+		if (num <= 0) return num.ToString();
+
+		switch (num % 100)
+		{
+			case 11:
+			case 12:
+			case 13:
+				return num + "th";
+		}
+
+		switch (num % 10)
+		{
+			case 1:
+				return num + "st";
+			case 2:
+				return num + "nd";
+			case 3:
+				return num + "rd";
+			default:
+				return num + "th";
+		}
+	}
+	public static bool IsNullOrEmpty(this string input) => string.IsNullOrEmpty(input);
+	public static bool IsNullOrWhiteSpace(this string input) => string.IsNullOrWhiteSpace(input);
 #endregion
 
 #region Colour
@@ -567,6 +683,11 @@ public static class Seb
 	public static string AsHex(this Color c) =>
 		"#" + c.r.ToString("X2") + c.g.ToString("X2") + c.b.ToString("X2");
 
+	public static Vector4 AsVec4(this Color c) => new Vector4(c.r, c.g, c.b, c.a);
+
+	public static Color Randomize(this Color c) =>
+		new Color(Random.value, Random.value, Random.value, c.a);
+	
 	public static Color GetRandom(this Gradient g) => g.Evaluate(Random.value);
 #endregion
 
@@ -649,7 +770,7 @@ public static class Seb
 
 		GameObject ret = new GameObject(name);
 		ret.transform.parent = input.transform;
-		if (resetLocalScale) ret.transform.ResetLS();
+		if (resetLocalScale) ret.transform.Reset();
 		else
 		{
 			ret.transform.localPosition = Vector3.zero;
@@ -676,16 +797,80 @@ public static class Seb
 	}
 #endregion
 
+#region Physics
+	/// <summary>
+	/// Sets a joint's targetRotation to match a given local rotation.
+	/// The joint transform's local rotation must be cached on Start and passed into this method.
+	/// </summary>
+	public static void SetTargetRotationLocal(this ConfigurableJoint joint,
+		Quaternion targetLocalRotation, Quaternion startLocalRotation)
+	{
+		if (joint.configuredInWorldSpace)
+		{
+			Debug.LogError(
+				"SetTargetRotationLocal should not be used with joints that are configured in world space. For world space joints, use SetTargetRotation.",
+				joint);
+		}
+		SetTargetRotationInternal(joint, targetLocalRotation, startLocalRotation, Space.Self);
+	}
+
+	/// <summary>
+	/// Sets a joint's targetRotation to match a given world rotation.
+	/// The joint transform's world rotation must be cached on Start and passed into this method.
+	/// </summary>
+	public static void SetTargetRotation(this ConfigurableJoint joint,
+		Quaternion targetWorldRotation, Quaternion startWorldRotation)
+	{
+		if (!joint.configuredInWorldSpace)
+		{
+			Debug.LogError(
+				"SetTargetRotation must be used with joints that are configured in world space. For local space joints, use SetTargetRotationLocal.",
+				joint);
+		}
+		SetTargetRotationInternal(joint, targetWorldRotation, startWorldRotation, Space.World);
+	}
+
+	static void SetTargetRotationInternal(this ConfigurableJoint joint, Quaternion targetRotation,
+		Quaternion startRotation, Space space)
+	{
+		// Calculate the rotation expressed by the joint's axis and secondary axis
+		var right = joint.axis;
+		var forward = Vector3.Cross(joint.axis, joint.secondaryAxis).normalized;
+		var up = Vector3.Cross(forward, right).normalized;
+		Quaternion worldToJointSpace = Quaternion.LookRotation(forward, up);
+
+		// Transform into world space
+		Quaternion resultRotation = Quaternion.Inverse(worldToJointSpace);
+
+		// Counter-rotate and apply the new local rotation.
+		// Joint space is the inverse of world space, so we need to invert our value
+		if (space == Space.World)
+		{
+			resultRotation *= startRotation * Quaternion.Inverse(targetRotation);
+		}
+		else
+		{
+			resultRotation *= Quaternion.Inverse(targetRotation) * startRotation;
+		}
+
+		// Transform back into joint space
+		resultRotation *= worldToJointSpace;
+
+		// Set target rotation to our newly calculated rotation
+		joint.targetRotation = resultRotation;
+	}
+#endregion
+
 #region Cameras
-	// public static Bounds OrthographicBoundsWS(this Camera camera)
-	// {
-	// 	float screenAspect = (float)Screen.width / (float)Screen.height;
-	// 	float cameraHeight = camera.orthographicSize * 2;
-	// 	Bounds bounds = new Bounds(
-	// 		camera.transform.position,
-	// 		new Vector3(cameraHeight * screenAspect, cameraHeight, 0));
-	// 	return bounds;
-	// }
+// public static Bounds OrthographicBoundsWS(this Camera camera)
+// {
+// 	float screenAspect = (float)Screen.width / (float)Screen.height;
+// 	float cameraHeight = camera.orthographicSize * 2;
+// 	Bounds bounds = new Bounds(
+// 		camera.transform.position,
+// 		new Vector3(cameraHeight * screenAspect, cameraHeight, 0));
+// 	return bounds;
+// }
 
 	public static Rect GetCornersWs(this Camera camera, float z = 0)
 	{
@@ -721,19 +906,21 @@ public static class Seb
 #region Logic
 	public static bool LiesBetween(this int num, int lower, int upper, bool inclusive = false)
 	{
-		return inclusive
-			? lower <= num && num <= upper
-			: lower <= num && num < upper;
+		return inclusive ? lower <= num && num <= upper : lower < num && num < upper;
 	}
 	public static bool LiesBetween(this float num, float lower, float upper, bool inclusive = false)
 	{
-		return inclusive
-			? lower <= num && num <= upper
-			: lower < num && num < upper;
+		return inclusive ? lower <= num && num <= upper : lower < num && num < upper;
 	}
 #endregion
 
 #region Maths
+	public static float SetSign(this float value, float sign) =>
+		Mathf.Abs(value) * Mathf.Sign(sign);
+	public static float SetSign(this float value, bool positive) =>
+		positive ? Mathf.Abs(value) : -Mathf.Abs(value);
+
+
 	public static float RoundToMultiple(this float value, float multipleOf) =>
 		Mathf.Round(value / multipleOf) * multipleOf;
 
@@ -765,9 +952,16 @@ public static class Seb
 	public static int RandomDirection() => (Random.Range(0, 2) == 1).AsDirectionalInt();
 
 	public static float SnappedSmoothDampTo(this float current, float target,
-		ref float currentVelocity, float snapDistance, ref bool moving
-		, float smoothTime, float maxSpeed = Mathf.Infinity, bool isAngle = false)
+		ref float currentVelocity, float snapDistance, ref bool moving, float smoothTime,
+		bool angle = false) =>
+		SnappedSmoothDampTo(current, target, ref currentVelocity,
+			snapDistance, ref moving,
+			smoothTime, Mathf.Infinity, angle);
+	public static float SnappedSmoothDampTo(this float current, float target,
+		ref float currentVelocity, float snapDistance, ref bool moving, float smoothTime,
+		float maxSpeed, bool angle = false)
 	{
+		if (angle) { target = target.UnwrapAngle() % 360; }
 		if (Mathf.Abs(target - current) < snapDistance)
 		{
 			moving = false;
@@ -777,15 +971,20 @@ public static class Seb
 		else
 		{
 			moving = true;
-			return isAngle
+			return angle
 				? Mathf.SmoothDampAngle(current, target, ref currentVelocity, smoothTime, maxSpeed)
 				: Mathf.SmoothDamp(current, target, ref currentVelocity, smoothTime, maxSpeed);
 		}
 	}
 
 	public static Vector3 SnappedSmoothDampTo(this Vector3 current, Vector3 target,
-		ref Vector3 currentVelocity, float snapDistance, ref bool moving
-		, float smoothTime, float maxSpeed = float.MaxValue)
+		ref Vector3 currentVelocity, float snapDistance, ref bool moving, float smoothTime) =>
+		SnappedSmoothDampTo(current, target,
+			ref currentVelocity, snapDistance, ref moving,
+			smoothTime, Mathf.Infinity);
+	public static Vector3 SnappedSmoothDampTo(this Vector3 current, Vector3 target,
+		ref Vector3 currentVelocity, float snapDistance, ref bool moving, float smoothTime,
+		float maxSpeed)
 	{
 		if ((target - current).magnitude < snapDistance)
 		{
@@ -795,7 +994,8 @@ public static class Seb
 		else
 		{
 			moving = true;
-			return Vector3.SmoothDamp(current, target, ref currentVelocity, smoothTime, maxSpeed);
+			return Vector3.SmoothDamp(current, target, ref currentVelocity, snapDistance,
+				smoothTime, maxSpeed);
 		}
 	}
 #endregion
@@ -821,7 +1021,7 @@ public static class Seb
 	public static string GetIncrementalFileNumber(this string path, bool brackets = false,
 		bool filenameOnly = false)
 	{
-		if (!System.IO.File.Exists(path))
+		if (!File.Exists(path))
 		{
 			return filenameOnly ? path.Split('/').Last() : path;
 		}
@@ -838,7 +1038,7 @@ public static class Seb
 				? String.Concat(extensionlessPath, " (", ++fileCount, ')', extension)
 				: String.Concat(extensionlessPath, ++fileCount, extension);
 		}
-		while (System.IO.File.Exists(newPath));
+		while (File.Exists(newPath));
 
 		if (filenameOnly)
 		{
@@ -858,7 +1058,7 @@ public static class Seb
 		string pathReturn = foldernameOnly ? path.Split('/').Last() : path;
 
 		//Check whether file exists
-		if (!System.IO.Directory.Exists(path)) { return pathReturn; }
+		if (!Directory.Exists(path)) { return pathReturn; }
 
 		int folderCount = 1;
 		string newPath;
@@ -870,23 +1070,32 @@ public static class Seb
 					? String.Concat(path, " (", folderCount, ')')
 					: "" + ++folderCount);
 		}
-		while (System.IO.Directory.Exists(newPath));
+		while (Directory.Exists(newPath));
 
 		return newPath;
 
 	}
+
+	public static bool EnsureFolderExists(this string path)
+	{
+		if (Directory.Exists(path)) { return true; }
+
+		Directory.CreateDirectory(path);
+		return false;
+	}
+	
+	public static string CleanPathString(this string path) => string.Concat(path.Select(c => !Path.GetInvalidPathChars().Contains(c) ? c : '-'));
 #endregion
 
 #region Types
-	public static IEnumerable<Type> GetInheritanceHierarchy
-		(this Type type)
+	public static IEnumerable<Type> GetInheritanceHierarchy(this Type type)
 	{
 		for (var current = type; current != null; current = current.BaseType)
 			yield return current;
 	}
 
 #if UNITY_EDITOR
-	public static IEnumerable<T> FindAssetsByType<T>() where T : UnityEngine.Object =>
+	public static IEnumerable<T> FindAssetsByType<T>() where T : Object =>
 		AssetDatabase.FindAssets($"t:{typeof(T)}")
 			.Select(t => AssetDatabase.GUIDToAssetPath(t))
 			.Select(assetPath => AssetDatabase.LoadAssetAtPath<T>(assetPath))
@@ -910,13 +1119,92 @@ public static class Seb
 	public static IEnumerable<Type> GetAllClassDerivatives<T>() where T : class =>
 		System.Reflection.Assembly.GetExecutingAssembly().GetTypes()
 			.Where(t => t.IsSubclassOf(typeof(T)));
-	// AppDomain.CurrentDomain.GetAssemblies()
-	// 	.SelectMany(assembly => assembly.GetTypes())
-	// 	.Where(type => type.IsSubclassOf(typeof(T)))
-	// 	.Select(type => Activator.CreateInstance(type) as T);
+// AppDomain.CurrentDomain.GetAssemblies()
+// 	.SelectMany(assembly => assembly.GetTypes())
+// 	.Where(type => type.IsSubclassOf(typeof(T)))
+// 	.Select(type => Activator.CreateInstance(type) as T);
+#endregion
+
+#region Enums
+	public static IEnumerable<T> GetFlags<T>(this T input) where T : Enum =>
+		Enum.GetValues(input.GetType()).Cast<Enum>().Where(value => input.HasFlag(value)).Cast<T>();
 #endregion
 
 }
+
+public enum Direction3
+{
+	Right,
+	Left,
+	Up,
+	Down,
+	Forward,
+	Backward
+}
+
+public enum Axis { X, Y, Z }
+public static class Directions
+{
+	private static Dictionary<Direction3, Vector3> direction3Vector3 =
+		new Dictionary<Direction3, Vector3>
+		{
+			{ Direction3.Right, Vector3.right },
+			{ Direction3.Left, Vector3.left },
+			{ Direction3.Up, Vector3.up },
+			{ Direction3.Down, Vector3.down },
+			{ Direction3.Forward, Vector3.forward },
+			{ Direction3.Backward, Vector3.back }
+		};
+
+	private static Dictionary<Direction3, Vector3Int> direction3VectorInt =
+		new Dictionary<Direction3, Vector3Int>
+		{
+			{ Direction3.Right, Vector3Int.right },
+			{ Direction3.Left, Vector3Int.left },
+			{ Direction3.Up, Vector3Int.up },
+			{ Direction3.Down, Vector3Int.down },
+			{ Direction3.Forward, Vector3Int.forward },
+			{ Direction3.Backward, Vector3Int.back }
+		};
+
+	public static IEnumerable<Direction3> All => direction3Vector3.Keys;
+
+	public static Vector3 Vec(this Direction3 dir) => direction3Vector3[dir];
+	public static Vector3Int VecInt(this Direction3 dir) => direction3VectorInt[dir];
+
+	public static float GetAxis(this Vector3 vector3, Axis axis) =>
+		GetDirection(vector3, (Direction3)((int)axis * 2));
+	public static float GetDirection(this Vector3 vector3, Direction3 dir) =>
+		dir switch
+		{
+			<= Direction3.Left => vector3.x * dir.IsPositive().AsDirectionalInt(),
+			<= Direction3.Down => vector3.y * dir.IsPositive().AsDirectionalInt(),
+			_ => vector3.z * dir.IsPositive().AsDirectionalInt(),
+		};
+	public static Direction3 Opposite(this Direction3 dir) =>
+		dir + ((int)dir % 2 == 0).AsDirectionalInt();
+
+	public static int Sign(this Direction3 dir) => dir.IsPositive() ? 1 : -1;
+	public static bool IsPositive(this Direction3 dir) => (int)dir % 2 == 0;
+	public static Axis Axis(this Direction3 dir) =>
+		dir switch
+		{
+			<= Direction3.Left => global::Axis.X,
+			<= Direction3.Down => global::Axis.Y,
+			_ => global::Axis.Z
+		};
+
+
+	public static Vector3 SetAxis(this Vector3 vec, Axis axis, float value) =>
+		axis switch
+		{
+			global::Axis.X => vec.SetX(value),
+			global::Axis.Y => vec.SetY(value),
+			_ => vec.SetZ(value)
+		};
+}
+
+
 
 [Serializable]
 public struct Vector3IntRange
@@ -983,10 +1271,11 @@ public struct Vector3IntRange
 		}
 	}
 
-	public Vector3Int GetRandom() =>
-		new Vector3Int(Random.Range(min.x, max.x),
-			Random.Range(min.y, max.y),
-			Random.Range(min.z, max.z));
+	public Vector3Int GetRandom(bool maxInclusive = false) =>
+		new Vector3Int(
+			Random.Range(min.x, max.x + maxInclusive.AsInt()),
+			Random.Range(min.y, max.y + maxInclusive.AsInt()),
+			Random.Range(min.z, max.z + maxInclusive.AsInt()));
 }
 
 [Serializable]
@@ -1076,6 +1365,17 @@ public static class Consts
 	public const float MagOne = 1.41421f;
 }
 
+public static class ShaderKeyword
+{
+	public static readonly int MainTex = Shader.PropertyToID("_MainTex");
+	public static readonly int Color = Shader.PropertyToID("_Color");
+	public static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
+	public static readonly int BaseMap = Shader.PropertyToID("_BaseMap");
+	public static readonly int BaseColorMap = Shader.PropertyToID("_BaseColorMap");
+	public static readonly int FaceColor = Shader.PropertyToID("_FaceColor");
+}
+
+[Serializable]
 public class RefillingPool<T>
 {
 	public List<T> basePool,
@@ -1144,12 +1444,41 @@ public class RefillingPool<T>
 
 public class Bictionary<T1, T2> : Dictionary<T1, T2>
 {
+	public Bictionary()
+	{
+	}
+	public Bictionary(IDictionary<T1, T2> dictionary) : base(dictionary)
+	{
+	}
+	public Bictionary(IDictionary<T1, T2> dictionary, IEqualityComparer<T1> comparer) :
+		base(dictionary, comparer)
+	{
+	}
+	public Bictionary(IEnumerable<KeyValuePair<T1, T2>> collection) : base(collection)
+	{
+	}
+	public Bictionary(IEnumerable<KeyValuePair<T1, T2>> collection, IEqualityComparer<T1> comparer)
+		: base(collection, comparer)
+	{
+	}
+	public Bictionary(IEqualityComparer<T1> comparer) : base(comparer)
+	{
+	}
+	public Bictionary(int capacity) : base(capacity)
+	{
+	}
+	public Bictionary(int capacity, IEqualityComparer<T1> comparer) : base(capacity, comparer)
+	{
+	}
+	protected Bictionary(SerializationInfo info, StreamingContext context) : base(info, context)
+	{
+	}
 	public T1 this[T2 index]
 	{
 		get
 		{
 			if (!this.Any(x => x.Value.Equals(index)))
-				throw new System.Collections.Generic.KeyNotFoundException();
+				throw new KeyNotFoundException();
 			return this.First(x => x.Value.Equals(index)).Key;
 		}
 	}
@@ -1158,7 +1487,6 @@ public class Bictionary<T1, T2> : Dictionary<T1, T2>
 [Serializable]
 public struct Transformation
 {
-
 	public Vector3 position;
 	public Quaternion rotation;
 	public Vector3 eulerAngles
@@ -1168,6 +1496,13 @@ public struct Transformation
 	}
 	public Vector3 scale;
 
+	public Transformation(Transform transform, Space space = Space.Self)
+	{
+		position = space == Space.World ? transform.position : transform.localPosition;
+		rotation = space == Space.World ? transform.rotation : transform.localRotation;
+		scale = space == Space.World ? transform.lossyScale : transform.localScale;
+	}
+	
 	public Transformation(Vector3 position, Quaternion rotation, Vector3 scale)
 	{
 		this.position = position;
@@ -1179,28 +1514,21 @@ public struct Transformation
 	{
 		this.position = position;
 		this.rotation = rotation;
-		this.scale = Vector3.one;
+		scale = Vector3.one;
 	}
 
 	public Transformation(Vector3 position)
 	{
 		this.position = position;
-		this.rotation = Quaternion.identity;
-		this.scale = Vector3.one;
+		rotation = Quaternion.identity;
+		scale = Vector3.one;
 	}
 
 	public Transformation(Quaternion rotation)
 	{
-		this.position = Vector3.zero;
+		position = Vector3.zero;
 		this.rotation = rotation;
-		this.scale = Vector3.one;
-	}
-
-	public Transformation(Transform transform, Space space = Space.Self)
-	{
-		position = space == Space.Self ? transform.localPosition : transform.position;
-		rotation = space == Space.Self ? transform.localRotation : transform.rotation;
-		scale = space == Space.Self ? transform.localScale : transform.lossyScale;
+		scale = Vector3.one;
 	}
 
 	public static Transformation operator+(Transformation a, Transformation b) =>
@@ -1297,7 +1625,7 @@ public static class Lines
 		if ((s < 0) != (t < 0))
 			return false;
 
-		var a = -p1.y * p2.x + p0.y * (p2.x - p1.x) + p0.x * (p1.y - p2.y) + p1.x * p2.y;
+		float a = -p1.y * p2.x + p0.y * (p2.x - p1.x) + p0.x * (p1.y - p2.y) + p1.x * p2.y;
 
 		return a < 0
 			? (s <= 0 && s + t >= a)
@@ -1313,5 +1641,36 @@ public static class Lines
 
 		return IsInTriangle(p, points[0].position.XZ(), points[1].position.XZ(),
 			points[2].position.XZ());
+	}
+}
+
+public static class Reflection
+{
+	public static IEnumerable<T> GetAllScriptChildren<T>() where T : class
+	{
+		return AppDomain.CurrentDomain.GetAssemblies()
+			.SelectMany(assembly => assembly.GetTypes())
+			.Where(type => type.IsSubclassOf(typeof(T))
+				&& !type.ContainsGenericParameters
+				&& !type.IsAbstract
+				&& type.GetConstructor(Type.EmptyTypes) != null)
+			.Select(type => Activator.CreateInstance(type) as T);
+	}
+
+	public static IEnumerable<T> GetAllSingletonScriptChildren<T>() where T : class
+	{
+		return AppDomain.CurrentDomain.GetAssemblies()
+			.SelectMany(assembly => assembly.GetTypes())
+			.Where(type => type.IsSubclassOf(typeof(T))
+				&& type.BaseType?.GenericTypeArguments.FirstOrDefault() == type)
+			.Select(type => Activator.CreateInstance(type) as T);
+	}
+}
+
+namespace ProbabilityExtensions
+{
+	public static class ProbabilityExtensions
+	{
+		public static bool getPercentChance(this int chance) => Random.value * 100 < chance;
 	}
 }

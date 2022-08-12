@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using NaughtyAttributes;
 using UnityEditor;
 using UnityEngine;
 
@@ -96,9 +97,38 @@ public abstract class SingletonScriptableObject<T> : ScriptableMonoObject
 
 }
 
-public abstract class ScriptableMonoObject : ScriptableObject
+public abstract class ScriptableMonoObject : ScriptableObject, ISerializationCallbackReceiver
 {
+	[ReadOnly]
+	public new string name;
 	private static ScriptableMonoObject[] _monoScripts;
+	protected void SetAssetName(string newName = null)
+	{
+	#if UNITY_EDITOR
+		string assetPath = AssetDatabase.GetAssetPath(this);
+		if (assetPath.IsNullOrEmpty()) { return; }
+		string assetName = assetPath.Split('/').Last().Split('.').First();
+
+		if (!newName.IsNullOrEmpty())
+		{
+			name = newName;
+			if (newName != assetName)
+			{
+				AssetDatabase.RenameAsset(AssetDatabase.GetAssetPath(this), newName);
+			}
+		}
+		else
+		{
+			name = assetName;
+		}
+
+	#endif
+	}
+
+	public virtual void OnBeforeSerialize() => SetAssetName();
+	public void OnAfterDeserialize()
+	{
+	}
 	public static ScriptableMonoObject[] monoScripts
 	{
 		get
