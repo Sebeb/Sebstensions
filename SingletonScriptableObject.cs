@@ -102,6 +102,8 @@ public abstract class ScriptableMonoObject : ScriptableObject, ISerializationCal
 	[ReadOnly]
 	public new string name;
 	private static ScriptableMonoObject[] _monoScripts;
+	private static Dictionary<Type, ScriptableMonoObject[]> _monoScriptsByType;
+
 	protected void SetAssetName(string newName = null)
 	{
 	#if UNITY_EDITOR
@@ -137,6 +139,9 @@ public abstract class ScriptableMonoObject : ScriptableObject, ISerializationCal
 			if (Application.isEditor || _monoScripts == null || _monoScripts.Length == 0)
 			{
 				_monoScripts = Resources.LoadAll<ScriptableMonoObject>("");
+				_monoScriptsByType = Resources.LoadAll<ScriptableMonoObject>("")
+					.GroupBy(m => m.GetType())
+					.ToDictionary(g => g.Key, g => g.ToArray());
 			}
 			return _monoScripts;
 		}
@@ -176,6 +181,10 @@ public abstract class ScriptableMonoObject : ScriptableObject, ISerializationCal
 
 	public virtual void ScriptAwake() {}
 	public virtual void ScriptReset() {}
+	public static IEnumerable<T> GetAllScriptables<T>() where T : ScriptableMonoObject 
+		=>
+		monoScripts.Length == 0 ? null : _monoScriptsByType[typeof(T)].Cast<T>();
+
 
 	public static T GetScriptableSingleton<T>() where T : ScriptableMonoObject =>
 		(T)monoScripts.FirstOrDefault(s => s.GetType() == typeof(T));

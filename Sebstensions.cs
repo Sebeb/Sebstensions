@@ -952,16 +952,9 @@ public static class Seb
 	public static int RandomDirection() => (Random.Range(0, 2) == 1).AsDirectionalInt();
 
 	public static float SnappedSmoothDampTo(this float current, float target,
-		ref float currentVelocity, float snapDistance, ref bool moving, float smoothTime,
-		bool angle = false) =>
-		SnappedSmoothDampTo(current, target, ref currentVelocity,
-			snapDistance, ref moving,
-			smoothTime, Mathf.Infinity, angle);
-	public static float SnappedSmoothDampTo(this float current, float target,
-		ref float currentVelocity, float snapDistance, ref bool moving, float smoothTime,
-		float maxSpeed, bool angle = false)
+		ref float currentVelocity, float snapDistance, ref bool moving
+		, float smoothTime, float maxSpeed = Mathf.Infinity, bool isAngle = false)
 	{
-		if (angle) { target = target.UnwrapAngle() % 360; }
 		if (Mathf.Abs(target - current) < snapDistance)
 		{
 			moving = false;
@@ -971,20 +964,15 @@ public static class Seb
 		else
 		{
 			moving = true;
-			return angle
+			return isAngle
 				? Mathf.SmoothDampAngle(current, target, ref currentVelocity, smoothTime, maxSpeed)
 				: Mathf.SmoothDamp(current, target, ref currentVelocity, smoothTime, maxSpeed);
 		}
 	}
 
 	public static Vector3 SnappedSmoothDampTo(this Vector3 current, Vector3 target,
-		ref Vector3 currentVelocity, float snapDistance, ref bool moving, float smoothTime) =>
-		SnappedSmoothDampTo(current, target,
-			ref currentVelocity, snapDistance, ref moving,
-			smoothTime, Mathf.Infinity);
-	public static Vector3 SnappedSmoothDampTo(this Vector3 current, Vector3 target,
-		ref Vector3 currentVelocity, float snapDistance, ref bool moving, float smoothTime,
-		float maxSpeed)
+		ref Vector3 currentVelocity, float snapDistance, ref bool moving
+		, float smoothTime, float maxSpeed = float.MaxValue)
 	{
 		if ((target - current).magnitude < snapDistance)
 		{
@@ -994,8 +982,7 @@ public static class Seb
 		else
 		{
 			moving = true;
-			return Vector3.SmoothDamp(current, target, ref currentVelocity, snapDistance,
-				smoothTime, maxSpeed);
+			return Vector3.SmoothDamp(current, target, ref currentVelocity, smoothTime, maxSpeed);
 		}
 	}
 #endregion
