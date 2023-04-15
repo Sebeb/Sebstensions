@@ -3,8 +3,6 @@ using System.IO;
 using System.Linq;
 using System;
 using System.Runtime.Serialization;
-using System.Text.RegularExpressions;
-using Mono.Collections.Generic;
 using UnityEngine.UI;
 using UnityEngine;
 using Object=UnityEngine.Object;
@@ -902,7 +900,6 @@ public static class Seb
 	}
 #endregion
 
-
 #region Logic
 	public static bool LiesBetween(this int num, int lower, int upper, bool inclusive = false)
 	{
@@ -1468,6 +1465,28 @@ public class Bictionary<T1, T2> : Dictionary<T1, T2>
 				throw new KeyNotFoundException();
 			return this.First(x => x.Value.Equals(index)).Key;
 		}
+	}
+}
+
+public class Map<TKey,TValue> : Dictionary<TKey,TValue>
+{
+	public new TValue this [TKey key]
+	{
+		get => ContainsKey(key) || !isDefaultValueSet ? base[key] : defaultValue;
+		set => base[key] = value;
+	}
+
+	private bool isDefaultValueSet;
+	private TValue _defaultValue;
+	public TValue defaultValue
+	{
+		get => _defaultValue;
+		set { _defaultValue = value; isDefaultValueSet = true; }
+	}
+
+	public Map(TValue defaultValue)
+	{
+		this.defaultValue = defaultValue;
 	}
 }
 
