@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System;
 using System.Runtime.Serialization;
+using JetBrains.Annotations;
 using UnityEngine.UI;
 using UnityEngine;
 using Object=UnityEngine.Object;
@@ -271,7 +272,10 @@ public static class Seb
 	public static float Lerp(this Vector2 vec, float t) => Mathf.Lerp(vec.x, vec.y, t);
 	public static float InverseLerp(this Vector2 vec, float t) =>
 		Mathf.InverseLerp(vec.x, vec.y, t);
-#endregion
+	
+	public static Vector3 GetMeanVector(this IEnumerable<Vector3> vectors) => vectors.Aggregate(Vector3.zero, (current, vector) => current + vector) / vectors.Count();
+
+	#endregion
 
 #region Rect Transform
 	public static Bounds CalculateBounds(this RectTransform rectT, Space space = Space.World)
