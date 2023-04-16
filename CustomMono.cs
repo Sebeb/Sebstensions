@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEditor;
 
-public abstract class CustomMono : MonoBehaviour
+public abstract class CustomMono : SerializedMonoBehaviour
 {
+	protected static bool quitting => ScriptHelper.quitting;
 	public static Action OnScreenSizeChange;
 
 	/// <summary>
@@ -13,9 +15,9 @@ public abstract class CustomMono : MonoBehaviour
 	protected virtual Action onStaticAwake { get; set; }
 	protected CustomMono()
 	{
-		CustomMonoHelper.onAssign += TryAssign;
-		CustomMonoHelper.onEditorAwake += TryOnEditorAwake;
-		CustomMonoHelper.onClassAwake += () => onStaticAwake?.Invoke();
+		CustomMonoHelper.OnAssign += TryAssign;
+		CustomMonoHelper.OnEditorAwake += TryOnEditorAwake;
+		CustomMonoHelper.OnClassAwake += () => onStaticAwake?.Invoke();
 	}
 
 	private void TryAssign()
@@ -25,7 +27,7 @@ public abstract class CustomMono : MonoBehaviour
 			|| gameObject == null
 			|| string.IsNullOrEmpty(gameObject.scene.name))
 		{
-			CustomMonoHelper.onAssign -= TryAssign;
+			CustomMonoHelper.OnAssign -= TryAssign;
 
 			return;
 		}
@@ -43,11 +45,12 @@ public abstract class CustomMono : MonoBehaviour
 			|| gameObject == null
 			|| string.IsNullOrEmpty(gameObject.scene.name))
 		{
-			CustomMonoHelper.onEditorAwake -= TryAssign;
+			CustomMonoHelper.OnEditorAwake -= TryAssign;
 			return;
 		}
 		if (isActiveAndEnabled)
 		{
+			Debug.Log(gameObject.name, this);
 			OnEditorAwake();
 		}
 
@@ -65,24 +68,24 @@ public abstract class CustomMono : MonoBehaviour
 [DefaultExecutionOrder(-9999)]
 public static class CustomMonoHelper
 {
-	internal static Action onAssign, onEditorAwake, onClassAwake;
+	internal static Action OnAssign, OnEditorAwake, OnClassAwake;
 	private static HashSet<CustomMono> monos;
 
 
 	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
 	private static void PlayAwake()
 	{
-		Debug.Log("Player awake");
-		onAssign?.Invoke();
-		onClassAwake?.Invoke();
+		// Debug.Log("Player awake");
+		OnAssign?.Invoke();
+		OnClassAwake?.Invoke();
 	}
 
 #if UNITY_EDITOR
 	static CustomMonoHelper()
 	{
-		EditorApplication.playModeStateChanged += onModeChange;
+		EditorApplication.playModeStateChanged += OnModeChange;
 	}
-	private static void onModeChange(PlayModeStateChange state)
+	private static void OnModeChange(PlayModeStateChange state)
 	{
 		if (state == PlayModeStateChange.EnteredEditMode)
 		{
@@ -91,7 +94,7 @@ public static class CustomMonoHelper
 	}
 
 	[InitializeOnLoadMethod]
-	private static void onLoad()
+	private static void OnLoad()
 	{
 		if (!Application.isPlaying
 			&& !EditorApplication.isPlayingOrWillChangePlaymode
@@ -105,8 +108,8 @@ public static class CustomMonoHelper
 	private static void EditorAwake()
 	{
 		// Debug.Log("Editor awake");
-		onAssign?.Invoke();
-		onEditorAwake?.Invoke();
+		OnAssign?.Invoke();
+		OnEditorAwake?.Invoke();
 	}
 
 }

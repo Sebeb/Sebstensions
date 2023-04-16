@@ -1476,19 +1476,13 @@ public class Map<TKey,TValue> : Dictionary<TKey,TValue>
 {
 	public new TValue this [TKey key]
 	{
-		get => ContainsKey(key) || !isDefaultValueSet ? base[key] : defaultValue;
+		get => ContainsKey(key) ? base[key] : defaultValue;
 		set => base[key] = value;
 	}
 
-	private bool isDefaultValueSet;
-	private TValue _defaultValue;
-	public TValue defaultValue
-	{
-		get => _defaultValue;
-		set { _defaultValue = value; isDefaultValueSet = true; }
-	}
+	private readonly TValue defaultValue;
 
-	public Map(TValue defaultValue)
+	public Map(TValue defaultValue = default)
 	{
 		this.defaultValue = defaultValue;
 	}

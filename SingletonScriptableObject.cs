@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using NaughtyAttributes;
+using Sirenix.OdinInspector;
 using UnityEditor;
 using UnityEngine;
 
@@ -14,25 +14,34 @@ public abstract class SingletonMonoBehaviour<T> : CustomMono where T : Singleton
 	protected override void Assign() => SetInstance();
 	private void SetInstance()
 	{
-
-		if (_i != null)
+		if (instance != null)
 		{
-			if (_i == this) { return; }
+			if (instance == this) { return; }
 
-			Debug.LogError($"Multiple instances of{GetType()} found", this);
+			Debug.LogError($"Multiple instances of {GetType()} found here...", this);
+			Debug.LogError($"...and here", instance);
 			return;
 		}
 		// Debug.Log($"Set instance {GetType()}", this);
 
-		_i = this as T;
+		instance = this as T;
 	}
-	// ReSharper disable once InconsistentNaming
-	public static T _i
+	private static T FindInstance()
 	{
-		get;
-		private set;
+		if (instance != null) { return instance; }
+
+		instance = FindObjectOfType<T>(includeInactive: true);
+		if (instance == null)
+		{
+			Debug.LogError($"No instance of {typeof(T)} found");
+		}
+		// else { Debug.Log($"Set instance {typeof(T)}", instance); }
+		return instance;
 	}
 
+	// ReSharper disable once InconsistentNaming
+	private static T instance;
+	public static T _i => instance ? instance : FindInstance();
 }
 
 /// <summary>
@@ -181,9 +190,9 @@ public abstract class ScriptableMonoObject : ScriptableObject, ISerializationCal
 
 	public virtual void ScriptAwake() {}
 	public virtual void ScriptReset() {}
-	public static IEnumerable<T> GetAllScriptables<T>() where T : ScriptableMonoObject 
+	public static IEnumerable<T> GetAllScriptables<T>() where T : ScriptableMonoObject
 		=>
-		monoScripts.Length == 0 ? null : _monoScriptsByType[typeof(T)].Cast<T>();
+			monoScripts.Length == 0 ? null : _monoScriptsByType[typeof(T)].Cast<T>();
 
 
 	public static T GetScriptableSingleton<T>() where T : ScriptableMonoObject =>

@@ -1,9 +1,8 @@
-using NaughtyAttributes;
+using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 
-[ExecuteInEditMode]
-public class ScreenRenderTextureOut : MonoBehaviour
+public class ScreenRenderTextureOut : CustomMono
 {
     [SerializeField]
     private Camera _cam;
@@ -20,7 +19,7 @@ public class ScreenRenderTextureOut : MonoBehaviour
     public GraphicsFormat format;
     [Range(1, 5)]
     public float downsampling;
-    [ShowAssetPreview, ReadOnly]
+    [PreviewField(100, ObjectFieldAlignment.Center)]
     public RenderTexture preview;
     private Vector2 prevScreenSize;
 
@@ -29,9 +28,13 @@ public class ScreenRenderTextureOut : MonoBehaviour
         if (Seb.screenSize == prevScreenSize) { return; }
         BindRenderTexture();
     }
-
-    private void OnValidate() => BindRenderTexture();
-    private void OnEnable() => BindRenderTexture();
+    
+    protected override void OnEditorAwake() => OnEnable();
+    private void OnEnable()
+    {
+        OnScreenSizeChange += BindRenderTexture;
+        BindRenderTexture();
+    }
 
     private void BindRenderTexture()
     {
@@ -40,12 +43,11 @@ public class ScreenRenderTextureOut : MonoBehaviour
         cam.targetTexture = preview = new RenderTexture((int)(Screen.width / downsampling),
             (int)(Screen.height / downsampling), 0, format);
         Shader.SetGlobalTexture(bufferName, cam.targetTexture);
-
-        prevScreenSize = Seb.screenSize;
     }
 
     private void OnDisable()
     {
+        OnScreenSizeChange -= BindRenderTexture;
         if (!cam) { return; }
 
         _cam.targetTexture = null;

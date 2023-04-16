@@ -11,6 +11,7 @@ using UnityEditor;
 ]
 public class ScriptHelper : MonoBehaviour
 {
+    public static bool quitting { get; private set; }
     private static ScriptHelper _instance;
     private Vector2 screenSize;
 
@@ -72,6 +73,7 @@ public class ScriptHelper : MonoBehaviour
 
     private void OnApplicationQuit()
     {
+        quitting = true;
         ScriptableMonoObject.ResetMonoScripts();
         Destroy(gameObject);
     }
