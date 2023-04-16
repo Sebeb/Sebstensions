@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
+using Sirenix.Serialization;
 using UnityEngine;
 using UnityEditor;
 
-public abstract class CustomMono : SerializedMonoBehaviour
+
+[ShowOdinSerializedPropertiesInInspector]
+public abstract class CustomMono : MonoBehaviour, ISerializationCallbackReceiver, ISupportsPrefabSerialization
 {
 	protected static bool quitting => ScriptHelper.quitting;
 	public static Action OnScreenSizeChange;
@@ -50,7 +53,6 @@ public abstract class CustomMono : SerializedMonoBehaviour
 		}
 		if (isActiveAndEnabled)
 		{
-			Debug.Log(gameObject.name, this);
 			OnEditorAwake();
 		}
 
@@ -60,6 +62,30 @@ public abstract class CustomMono : SerializedMonoBehaviour
 	/// Called when entering edit mode on objects present in the scene
 	/// </summary>
 	protected virtual void OnEditorAwake() {}
+
+	#region Odin
+
+	[SerializeField, HideInInspector]
+	private SerializationData serializationData;
+
+	SerializationData ISupportsPrefabSerialization.SerializationData
+	{
+		get { return this.serializationData; }
+		set { this.serializationData = value; }
+	}
+
+	void ISerializationCallbackReceiver.OnAfterDeserialize()
+	{
+		UnitySerializationUtility.DeserializeUnityObject(this, ref this.serializationData);
+	}
+
+	void ISerializationCallbackReceiver.OnBeforeSerialize()
+	{
+		UnitySerializationUtility.SerializeUnityObject(this, ref this.serializationData);
+	}
+
+	#endregion
+
 }
 
 #if UNITY_EDITOR
