@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.UI;
+
 
 [DefaultExecutionOrder(-200)]
 public class DebugHUD : SingletonMonoBehaviour<DebugHUD>
@@ -15,10 +15,10 @@ public class DebugHUD : SingletonMonoBehaviour<DebugHUD>
 	public TextMeshProUGUI centerTmp;
 	public CanvasGroup centerCanvasGroup;
 
-	private Dictionary<int, Coroutine> cornerRemoveCoros = new Dictionary<int, Coroutine>();
+	private Dictionary<int, Coroutine> cornerRemoveCoros = new();
 	private Coroutine centerFadeCoro;
 
-	private static SortedDictionary<int, string> debugTexts = new SortedDictionary<int, string>();
+	private static SortedDictionary<int, string> debugTexts = new();
 
 	private void Start()
 	{

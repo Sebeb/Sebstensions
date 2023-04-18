@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using Weaver;
+
 
 [DefaultExecutionOrder(-999)]
 public class SettingsManager : SingletonScriptableObject<SettingsManager>
 {
     [SerializeReference]
-    public List<SettingsBox> boxes = new List<SettingsBox>();
+    public List<SettingsBox> boxes = new();
     public static Dictionary<Type, dynamic> boxDic;
 
 
@@ -21,7 +21,7 @@ public class SettingsManager : SingletonScriptableObject<SettingsManager>
             boxDic.Add(settingsBox.GetType(), settingsBox);
         }
 
-        Debug.Log($"Loaded {_i.boxes.Count} sets of settings");
+        // Debug.Log($"Loaded {_i.boxes.Count} sets of settings");
     }
 
     public static T1 GetSetting<T1>() where T1 : SettingsBox, new()

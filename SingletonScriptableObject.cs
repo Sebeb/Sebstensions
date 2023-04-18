@@ -1,48 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using Sirenix.OdinInspector;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 using UnityEngine;
 
-
-public abstract class SingletonMonoBehaviour<T> : CustomMono where T : SingletonMonoBehaviour<T>
-{
-
-
-	protected override void Assign() => SetInstance();
-	private void SetInstance()
-	{
-		if (instance != null)
-		{
-			if (instance == this) { return; }
-
-			Debug.LogError($"Multiple instances of {GetType()} found here...", this);
-			Debug.LogError($"...and here", instance);
-			return;
-		}
-		// Debug.Log($"Set instance {GetType()}", this);
-
-		instance = this as T;
-	}
-	private static T FindInstance()
-	{
-		if (instance != null) { return instance; }
-
-		instance = FindObjectOfType<T>(includeInactive: true);
-		if (instance == null)
-		{
-			Debug.LogError($"No instance of {typeof(T)} found");
-		}
-		// else { Debug.Log($"Set instance {typeof(T)}", instance); }
-		return instance;
-	}
-
-	// ReSharper disable once InconsistentNaming
-	private static T instance;
-	public static T _i => instance ? instance : FindInstance();
-}
 
 /// <summary>
 /// Abstract class for making reload-proof singletons out of ScriptableObjects
@@ -89,8 +51,10 @@ public abstract class SingletonScriptableObject<T> : ScriptableMonoObject
 
 			_instance = instances[0];
 		}
+
 		return _instance;
 	}
+
 	// ReSharper disable once InconsistentNaming
 	public static T _i
 	{
@@ -100,101 +64,48 @@ public abstract class SingletonScriptableObject<T> : ScriptableMonoObject
 			{
 				SetInstance();
 			}
+
 			return _instance;
 		}
 	}
-
 }
 
-public abstract class ScriptableMonoObject : ScriptableObject, ISerializationCallbackReceiver
+public class ScriptableSingletonHelper : MonoBehaviour
 {
-	[ReadOnly]
-	public new string name;
-	private static ScriptableMonoObject[] _monoScripts;
-	private static Dictionary<Type, ScriptableMonoObject[]> _monoScriptsByType;
-
-	protected void SetAssetName(string newName = null)
+#if UNITY_EDITOR
+	[UnityEditor.Callbacks.DidReloadScripts]
+	public static void DebugSingletons()
 	{
-	#if UNITY_EDITOR
-		string assetPath = AssetDatabase.GetAssetPath(this);
-		if (assetPath.IsNullOrEmpty()) { return; }
-		string assetName = assetPath.Split('/').Last().Split('.').First();
+		bool assetsMade = false;
+		IEnumerable<ScriptableMonoObject> singletons =
+			Reflection.GetAllSingletonScriptChildren<ScriptableMonoObject>();
 
-		if (!newName.IsNullOrEmpty())
+		foreach (ScriptableMonoObject monoObject in singletons)
 		{
-			name = newName;
-			if (newName != assetName)
+			string[] guids = AssetDatabase.FindAssets("t:" + monoObject.GetType());
+			string name = monoObject.GetType().ToString().NormalizeCamel();
+			if (guids.Length > 1)
 			{
-				AssetDatabase.RenameAsset(AssetDatabase.GetAssetPath(this), newName);
+				Debug.Log(
+					$"Multiple instances of {monoObject.GetType()} found at:{string.Join("\n", guids.Select(AssetDatabase.GUIDToAssetPath))}");
+			}
+			else if (guids.Length == 0)
+			{
+				Debug.Log($"No instance of type {name} found");
+
+				ScriptableObject newSingleton =
+					ScriptableObject.CreateInstance(monoObject.GetType());
+				string path = $"Assets/Resources/{name}.asset";
+				AssetDatabase.CreateAsset(newSingleton, path);
+				assetsMade = true;
+				Debug.Log("Created new settings at " + path);
 			}
 		}
-		else
-		{
-			name = assetName;
-		}
 
-	#endif
-	}
-
-	public virtual void OnBeforeSerialize() => SetAssetName();
-	public void OnAfterDeserialize()
-	{
-	}
-	public static ScriptableMonoObject[] monoScripts
-	{
-		get
+		if (assetsMade)
 		{
-			//Update monoscripts listing if not previously updated or if we're in the editor
-			if (Application.isEditor || _monoScripts == null || _monoScripts.Length == 0)
-			{
-				_monoScripts = Resources.LoadAll<ScriptableMonoObject>("");
-				_monoScriptsByType = Resources.LoadAll<ScriptableMonoObject>("")
-					.GroupBy(m => m.GetType())
-					.ToDictionary(g => g.Key, g => g.ToArray());
-			}
-			return _monoScripts;
-		}
-		set => _monoScripts = value;
-	}
-
-	public static void StartMonoScripts()
-	{
-		if (!Application.isPlaying) { return; }
-		foreach (ScriptableMonoObject monoScript in ScriptableMonoObject.monoScripts)
-		{
-			monoScript.ScriptAwake();
+			AssetDatabase.SaveAssets();
 		}
 	}
-
-	//TODO Init all singletons which implement SingletonScriptableObject<>
-	public static void InitSingletons()
-	{
-		//Select all types which inherit the generic class SingletonScriptableObject
-		IEnumerable<Type> singletonTypes = from t in Assembly.GetExecutingAssembly().GetTypes()
-			where t.IsClass && !t.IsAbstract && t.GetInheritanceHierarchy().Any(t =>
-				t.IsGenericType &&
-				t.GetGenericTypeDefinition() == typeof(SingletonScriptableObject<>))
-			select t;
-
-		Debug.Log(string.Join(", ", singletonTypes.Select(t => t.ToString())));
-	}
-
-	public static void ResetMonoScripts()
-	{
-		foreach (ScriptableMonoObject monoScript in ScriptableMonoObject.monoScripts)
-		{
-			monoScript.ScriptReset();
-		}
-	}
-
-
-	public virtual void ScriptAwake() {}
-	public virtual void ScriptReset() {}
-	public static IEnumerable<T> GetAllScriptables<T>() where T : ScriptableMonoObject
-		=>
-			monoScripts.Length == 0 ? null : _monoScriptsByType[typeof(T)].Cast<T>();
-
-
-	public static T GetScriptableSingleton<T>() where T : ScriptableMonoObject =>
-		(T)monoScripts.FirstOrDefault(s => s.GetType() == typeof(T));
+#endif
 }

@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
-using Sirenix.Serialization;
 using UnityEngine;
 using UnityEditor;
 
 
 [ShowOdinSerializedPropertiesInInspector]
-public abstract class CustomMono : MonoBehaviour, ISerializationCallbackReceiver, ISupportsPrefabSerialization
+public abstract class CustomMono : MonoBehaviour
 {
 	protected static bool quitting => ScriptHelper.quitting;
 	public static Action OnScreenSizeChange;
@@ -16,6 +15,7 @@ public abstract class CustomMono : MonoBehaviour, ISerializationCallbackReceiver
 	/// Called once per class on game and editor awake, this should be assigned a static method
 	/// </summary>
 	protected virtual Action onStaticAwake { get; set; }
+
 	protected CustomMono()
 	{
 		CustomMonoHelper.OnAssign += TryAssign;
@@ -27,8 +27,8 @@ public abstract class CustomMono : MonoBehaviour, ISerializationCallbackReceiver
 	{
 
 		if (this == null
-			|| gameObject == null
-			|| string.IsNullOrEmpty(gameObject.scene.name))
+		    || gameObject == null
+		    || string.IsNullOrEmpty(gameObject.scene.name))
 		{
 			CustomMonoHelper.OnAssign -= TryAssign;
 
@@ -38,19 +38,22 @@ public abstract class CustomMono : MonoBehaviour, ISerializationCallbackReceiver
 		Assign();
 
 	}
+
 	/// <summary>
 	/// Called when entering play mode or edit mode on gameobjects in the scene
 	/// </summary>
 	protected virtual void Assign() {}
+
 	private void TryOnEditorAwake()
 	{
 		if (this == null
-			|| gameObject == null
-			|| string.IsNullOrEmpty(gameObject.scene.name))
+		    || gameObject == null
+		    || string.IsNullOrEmpty(gameObject.scene.name))
 		{
 			CustomMonoHelper.OnEditorAwake -= TryAssign;
 			return;
 		}
+
 		if (isActiveAndEnabled)
 		{
 			OnEditorAwake();
@@ -62,29 +65,6 @@ public abstract class CustomMono : MonoBehaviour, ISerializationCallbackReceiver
 	/// Called when entering edit mode on objects present in the scene
 	/// </summary>
 	protected virtual void OnEditorAwake() {}
-
-	#region Odin
-
-	[SerializeField, HideInInspector]
-	private SerializationData serializationData;
-
-	SerializationData ISupportsPrefabSerialization.SerializationData
-	{
-		get { return this.serializationData; }
-		set { this.serializationData = value; }
-	}
-
-	void ISerializationCallbackReceiver.OnAfterDeserialize()
-	{
-		UnitySerializationUtility.DeserializeUnityObject(this, ref this.serializationData);
-	}
-
-	void ISerializationCallbackReceiver.OnBeforeSerialize()
-	{
-		UnitySerializationUtility.SerializeUnityObject(this, ref this.serializationData);
-	}
-
-	#endregion
 
 }
 
@@ -111,6 +91,7 @@ public static class CustomMonoHelper
 	{
 		EditorApplication.playModeStateChanged += OnModeChange;
 	}
+
 	private static void OnModeChange(PlayModeStateChange state)
 	{
 		if (state == PlayModeStateChange.EnteredEditMode)
@@ -123,8 +104,8 @@ public static class CustomMonoHelper
 	private static void OnLoad()
 	{
 		if (!Application.isPlaying
-			&& !EditorApplication.isPlayingOrWillChangePlaymode
-			&& !EditorApplication.isCompiling)
+		    && !EditorApplication.isPlayingOrWillChangePlaymode
+		    && !EditorApplication.isCompiling)
 		{
 			EditorAwake();
 		}

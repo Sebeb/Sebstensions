@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using System;
 using System.Runtime.Serialization;
-using JetBrains.Annotations;
 using UnityEngine.UI;
 using UnityEngine;
 using Object=UnityEngine.Object;
@@ -14,7 +13,7 @@ using UnityEditor;
 
 public static class Seb
 {
-	public static Vector2 screenSize => new Vector2(Screen.width, Screen.height);
+	public static Vector2 screenSize => new(Screen.width, Screen.height);
 
 #region Vectors
 	public static Vector2 XZ(this Vector3 input)
@@ -50,138 +49,92 @@ public static class Seb
 	public static Vector2 Rotate(this Vector2 aVec, float aDegree) =>
 		ComplexMult(aVec, Rotation(aDegree));
 
-	public static Vector2 SetX(this Vector2 input, float value) => new Vector2(value, input.y);
-	public static Vector2 SetY(this Vector2 input, float value) => new Vector2(input.x, value);
-	public static Vector2 MoveX(this Vector2 input, float value) =>
-		new Vector2(input.x + value, input.y);
-	public static Vector2 MoveY(this Vector2 input, float value) =>
-		new Vector2(input.x, input.y + value);
-	public static Vector2 ScaleX(this Vector2 input, float value) =>
-		new Vector2(input.x * value, input.y);
-	public static Vector2 ScaleY(this Vector2 input, float value) =>
-		new Vector2(input.x, input.y * value);
-	public static Vector2 CapMax(this Vector2 input, float value) =>
-		new Vector2(input.x.CapMax(value), input.y.CapMax(value));
-	public static Vector2 CapMin(this Vector2 input, float value) =>
-		new Vector2(input.x.CapMin(value), input.y.CapMin(value));
+	public static Vector2 SetX(this Vector2 input, float value) => new(value, input.y);
+	public static Vector2 SetY(this Vector2 input, float value) => new(input.x, value);
+	public static Vector2 MoveX(this Vector2 input, float value) => new(input.x + value, input.y);
+	public static Vector2 MoveY(this Vector2 input, float value) => new(input.x, input.y + value);
+	public static Vector2 ScaleX(this Vector2 input, float value) => new(input.x * value, input.y);
+	public static Vector2 ScaleY(this Vector2 input, float value) => new(input.x, input.y * value);
+	public static Vector2 CapMax(this Vector2 input, float value) => new(input.x.CapMax(value), input.y.CapMax(value));
+	public static Vector2 CapMin(this Vector2 input, float value) => new(input.x.CapMin(value), input.y.CapMin(value));
 	public static Vector2 CapMin(this Vector2 input, float xMin, float yMin) =>
-		new Vector2(input.x.CapMin(xMin), input.y.CapMin(yMin));
-	public static Vector2 Multiply(this Vector2 input, Vector2 value) =>
-		new Vector2(input.x * value.x, input.y * value.y);
+		new(input.x.CapMin(xMin), input.y.CapMin(yMin));
+	public static Vector2 Multiply(this Vector2 input, Vector2 value) => new(input.x * value.x, input.y * value.y);
 	public static Vector2 DivideComponents(this Vector2 input, Vector2 value) =>
-		new Vector2(input.x / value.x, input.y / value.y);
+		new(input.x / value.x, input.y / value.y);
 
-	public static Vector3 SetX(this Vector3 input, float value) =>
-		new Vector3(value, input.y, input.z);
-	public static Vector3 SetY(this Vector3 input, float value) =>
-		new Vector3(input.x, value, input.z);
-	public static Vector3 SetZ(this Vector3 input, float value) =>
-		new Vector3(input.x, input.y, value);
+	public static Vector3 SetX(this Vector3 input, float value) => new(value, input.y, input.z);
+	public static Vector3 SetY(this Vector3 input, float value) => new(input.x, value, input.z);
+	public static Vector3 SetZ(this Vector3 input, float value) => new(input.x, input.y, value);
 	public static Vector3 SetMagnitude(this Vector3 input, float value) =>
 		new Vector3(input.x, input.y, input.z).normalized * value;
-	public static Vector3 SetZ(this Vector2 input, float z) => new Vector3(input.x, input.y, z);
-	public static Vector3 MoveX(this Vector3 input, float value) =>
-		new Vector3(input.x + value, input.y, input.z);
-	public static Vector3 MoveY(this Vector3 input, float value) =>
-		new Vector3(input.x, input.y + value, input.z);
-	public static Vector3 MoveZ(this Vector3 input, float value) =>
-		new Vector3(input.x, input.y, input.z + value);
-	public static Vector3 ScaleX(this Vector3 input, float value) =>
-		new Vector3(input.x * value, input.y, input.z);
-	public static Vector3 ScaleY(this Vector3 input, float value) =>
-		new Vector3(input.x, input.y * value, input.z);
-	public static Vector3 ScaleZ(this Vector3 input, float value) =>
-		new Vector3(input.x, input.y, input.z * value);
-	public static Vector3 ScaleXY(this Vector3 input, float value) =>
-		new Vector3(input.x * value, input.y * value, input.z);
-	public static Vector3 ScaleX(this Vector3Int input, float value) =>
-		new Vector3(input.x * value, input.y, input.z);
-	public static Vector3 ScaleY(this Vector3Int input, float value) =>
-		new Vector3(input.x, input.y * value, input.z);
-	public static Vector3 ScaleZ(this Vector3Int input, float value) =>
-		new Vector3(input.x, input.y, input.z * value);
-	public static Vector3 ScaleXY(this Vector3Int input, float value) =>
-		new Vector3(input.x * value, input.y * value, input.z);
+	public static Vector3 SetZ(this Vector2 input, float z) => new(input.x, input.y, z);
+	public static Vector3 MoveX(this Vector3 input, float value) => new(input.x + value, input.y, input.z);
+	public static Vector3 MoveY(this Vector3 input, float value) => new(input.x, input.y + value, input.z);
+	public static Vector3 MoveZ(this Vector3 input, float value) => new(input.x, input.y, input.z + value);
+	public static Vector3 ScaleX(this Vector3 input, float value) => new(input.x * value, input.y, input.z);
+	public static Vector3 ScaleY(this Vector3 input, float value) => new(input.x, input.y * value, input.z);
+	public static Vector3 ScaleZ(this Vector3 input, float value) => new(input.x, input.y, input.z * value);
+	public static Vector3 ScaleXY(this Vector3 input, float value) => new(input.x * value, input.y * value, input.z);
+	public static Vector3 ScaleX(this Vector3Int input, float value) => new(input.x * value, input.y, input.z);
+	public static Vector3 ScaleY(this Vector3Int input, float value) => new(input.x, input.y * value, input.z);
+	public static Vector3 ScaleZ(this Vector3Int input, float value) => new(input.x, input.y, input.z * value);
+	public static Vector3 ScaleXY(this Vector3Int input, float value) => new(input.x * value, input.y * value, input.z);
 	public static Vector3 CapMax(this Vector3 input, float value) =>
-		new Vector3(input.x.CapMax(value), input.y.CapMax(value), input.z.CapMax(value));
+		new(input.x.CapMax(value), input.y.CapMax(value), input.z.CapMax(value));
 	public static Vector3 CapMin(this Vector3 input, float value) =>
-		new Vector3(input.x.CapMin(value), input.y.CapMin(value), input.z.CapMin(value));
+		new(input.x.CapMin(value), input.y.CapMin(value), input.z.CapMin(value));
 	public static Vector3 Multiply(this Vector3 input, Vector3 value) =>
-		new Vector3(input.x * value.x, input.y * value.y, input.z * value.z);
+		new(input.x * value.x, input.y * value.y, input.z * value.z);
 	public static Vector3 Divide(this Vector3 input, Vector3 value) =>
-		new Vector3(input.x / value.x, input.y / value.y, input.z / value.z);
-	public static Vector3 AsVec3X(this float x) => new Vector3(x, 0, 0);
-	public static Vector3 AsVec3Y(this float y) => new Vector3(0, y, 0);
-	public static Vector3 AsVec3Z(this float z) => new Vector3(0, 0, z);
+		new(input.x / value.x, input.y / value.y, input.z / value.z);
+	public static Vector3 AsVec3X(this float x) => new(x, 0, 0);
+	public static Vector3 AsVec3Y(this float y) => new(0, y, 0);
+	public static Vector3 AsVec3Z(this float z) => new(0, 0, z);
 
-	public static Vector2Int SetX(this Vector2Int input, int value) =>
-		new Vector2Int(value, input.y);
-	public static Vector2Int SetY(this Vector2Int input, int value) =>
-		new Vector2Int(input.x, value);
-	public static Vector2Int MoveX(this Vector2Int input, int value) =>
-		new Vector2Int(input.x + value, input.y);
-	public static Vector2Int MoveY(this Vector2Int input, int value) =>
-		new Vector2Int(input.x, input.y + value);
-	public static Vector2Int ScaleX(this Vector2Int input, int value) =>
-		new Vector2Int(input.x * value, input.y);
-	public static Vector2Int ScaleY(this Vector2Int input, int value) =>
-		new Vector2Int(input.x, input.y * value);
+	public static Vector2Int SetX(this Vector2Int input, int value) => new(value, input.y);
+	public static Vector2Int SetY(this Vector2Int input, int value) => new(input.x, value);
+	public static Vector2Int MoveX(this Vector2Int input, int value) => new(input.x + value, input.y);
+	public static Vector2Int MoveY(this Vector2Int input, int value) => new(input.x, input.y + value);
+	public static Vector2Int ScaleX(this Vector2Int input, int value) => new(input.x * value, input.y);
+	public static Vector2Int ScaleY(this Vector2Int input, int value) => new(input.x, input.y * value);
 	public static Vector2Int CapMax(this Vector2Int input, int value) =>
-		new Vector2Int(input.x.CapMax(value), input.y.CapMax(value));
+		new(input.x.CapMax(value), input.y.CapMax(value));
 	public static Vector2Int CapMin(this Vector2Int input, int value) =>
-		new Vector2Int(input.x.CapMin(value), input.y.CapMin(value));
+		new(input.x.CapMin(value), input.y.CapMin(value));
 
-	public static Vector3Int SetX(this Vector3Int input, int value) =>
-		new Vector3Int(value, input.y, input.z);
-	public static Vector3Int SetY(this Vector3Int input, int value) =>
-		new Vector3Int(input.x, value, input.z);
-	public static Vector3Int SetZ(this Vector3Int input, int value) =>
-		new Vector3Int(input.x, input.y, value);
-	public static Vector3Int SetZ(this Vector2Int input, int value) =>
-		new Vector3Int(input.x, input.y, value);
-	public static Vector3Int MoveX(this Vector3Int input, int value) =>
-		new Vector3Int(input.x + value, input.y, input.z);
-	public static Vector3Int MoveY(this Vector3Int input, int value) =>
-		new Vector3Int(input.x, input.y + value, input.z);
-	public static Vector3Int MoveZ(this Vector3Int input, int value) =>
-		new Vector3Int(input.x, input.y, input.z + value);
+	public static Vector3Int SetX(this Vector3Int input, int value) => new(value, input.y, input.z);
+	public static Vector3Int SetY(this Vector3Int input, int value) => new(input.x, value, input.z);
+	public static Vector3Int SetZ(this Vector3Int input, int value) => new(input.x, input.y, value);
+	public static Vector3Int SetZ(this Vector2Int input, int value) => new(input.x, input.y, value);
+	public static Vector3Int MoveX(this Vector3Int input, int value) => new(input.x + value, input.y, input.z);
+	public static Vector3Int MoveY(this Vector3Int input, int value) => new(input.x, input.y + value, input.z);
+	public static Vector3Int MoveZ(this Vector3Int input, int value) => new(input.x, input.y, input.z + value);
 	public static Vector3Int CapMax(this Vector3Int input, int value) =>
-		new Vector3Int(input.x.CapMax(value), input.y.CapMax(value), input.z.CapMax(value));
+		new(input.x.CapMax(value), input.y.CapMax(value), input.z.CapMax(value));
 	public static Vector3Int CapMin(this Vector3Int input, int value) =>
-		new Vector3Int(input.x.CapMin(value), input.y.CapMin(value), input.z.CapMin(value));
+		new(input.x.CapMin(value), input.y.CapMin(value), input.z.CapMin(value));
 
 
-	public static Vector4 SetX(this Vector4 input, float value) =>
-		new Vector4(value, input.y, input.z, input.w);
-	public static Vector4 SetY(this Vector4 input, float value) =>
-		new Vector4(input.x, value, input.z, input.w);
-	public static Vector4 SetZ(this Vector4 input, float value) =>
-		new Vector4(input.x, input.y, value, input.w);
-	public static Vector4 SetW(this Vector4 input, float value) =>
-		new Vector4(input.x, input.y, input.z, value);
-	public static Vector4 MoveX(this Vector4 input, float value) =>
-		new Vector4(input.x + value, input.y, input.z, input.w);
-	public static Vector4 MoveY(this Vector4 input, float value) =>
-		new Vector4(input.x, input.y + value, input.z, input.w);
-	public static Vector4 MoveZ(this Vector4 input, float value) =>
-		new Vector4(input.x, input.y, input.z + value, input.w);
-	public static Vector4 MoveW(this Vector4 input, float value) =>
-		new Vector4(input.x, input.y, input.z, input.w + value);
-	public static Vector4 ScaleX(this Vector4 input, float value) =>
-		new Vector4(input.x * value, input.y, input.z, input.w);
-	public static Vector4 ScaleY(this Vector4 input, float value) =>
-		new Vector4(input.x, input.y * value, input.z, input.w);
-	public static Vector4 ScaleZ(this Vector4 input, float value) =>
-		new Vector4(input.x, input.y, input.z * value, input.w);
-	public static Vector4 ScaleW(this Vector4 input, float value) =>
-		new Vector4(input.x, input.y, input.z, input.w * value);
+	public static Vector4 SetX(this Vector4 input, float value) => new(value, input.y, input.z, input.w);
+	public static Vector4 SetY(this Vector4 input, float value) => new(input.x, value, input.z, input.w);
+	public static Vector4 SetZ(this Vector4 input, float value) => new(input.x, input.y, value, input.w);
+	public static Vector4 SetW(this Vector4 input, float value) => new(input.x, input.y, input.z, value);
+	public static Vector4 MoveX(this Vector4 input, float value) => new(input.x + value, input.y, input.z, input.w);
+	public static Vector4 MoveY(this Vector4 input, float value) => new(input.x, input.y + value, input.z, input.w);
+	public static Vector4 MoveZ(this Vector4 input, float value) => new(input.x, input.y, input.z + value, input.w);
+	public static Vector4 MoveW(this Vector4 input, float value) => new(input.x, input.y, input.z, input.w + value);
+	public static Vector4 ScaleX(this Vector4 input, float value) => new(input.x * value, input.y, input.z, input.w);
+	public static Vector4 ScaleY(this Vector4 input, float value) => new(input.x, input.y * value, input.z, input.w);
+	public static Vector4 ScaleZ(this Vector4 input, float value) => new(input.x, input.y, input.z * value, input.w);
+	public static Vector4 ScaleW(this Vector4 input, float value) => new(input.x, input.y, input.z, input.w * value);
 	public static Vector4 ScaleXY(this Vector4 input, float value) =>
-		new Vector4(input.x * value, input.y * value, input.z, input.w);
+		new(input.x * value, input.y * value, input.z, input.w);
 	public static Vector4 CapMax(this Vector4 input, float value) =>
-		new Vector4(input.x.CapMax(value), input.y.CapMax(value), input.z.CapMax(value),
+		new(input.x.CapMax(value), input.y.CapMax(value), input.z.CapMax(value),
 			input.w.CapMax(value));
 	public static Vector4 CapMin(this Vector4 input, float value) =>
-		new Vector4(input.x.CapMin(value), input.y.CapMin(value), input.z.CapMin(value),
+		new(input.x.CapMin(value), input.y.CapMin(value), input.z.CapMin(value),
 			input.w.CapMin(value));
 
 
@@ -201,17 +154,16 @@ public static class Seb
 	}
 
 	public static Vector2 RandomTo(this Vector2 min, Vector2 max) =>
-		new Vector2(Random.Range(min.x, max.x), Random.Range(min.y, max.y));
+		new(Random.Range(min.x, max.x), Random.Range(min.y, max.y));
 	public static float RandomRange(this Vector2 input) => Random.Range(input.x, input.y);
 	public static int RandomRange(this Vector2Int input, bool maxInclusive = false) =>
 		Random.Range(input.x, input.y + maxInclusive.AsInt());
 
-	public static Vector3 Modulo(this Vector3 a, Vector3 b) =>
-		new Vector3(a.x % b.x, a.y % b.y, a.z % b.z);
+	public static Vector3 Modulo(this Vector3 a, Vector3 b) => new(a.x % b.x, a.y % b.y, a.z % b.z);
 
 	/// <summary>Converts an euler rotation to be between 180 and -180, as it appears in the inspector </summary>
 	public static Vector3 WrapAngle(this Vector3 angle) =>
-		new Vector3(WrapAngle(angle.x), WrapAngle(angle.y), WrapAngle(angle.z));
+		new(WrapAngle(angle.x), WrapAngle(angle.y), WrapAngle(angle.z));
 	/// <summary>Converts an euler rotation to be between 180 and -180, as it appears in the inspector </summary>
 	public static float WrapAngle(this float angle)
 	{
@@ -584,8 +536,7 @@ public static class Seb
 		return breakPoint;
 	}
 
-	public static string StripPunctuation(this string input) =>
-		new string(input.Where(c => !char.IsPunctuation(c)).ToArray());
+	public static string StripPunctuation(this string input) => new(input.Where(c => !char.IsPunctuation(c)).ToArray());
 
 	public static string CombinePaths(this string path1, params string[] paths)
 	{
@@ -685,16 +636,15 @@ public static class Seb
 	public static string AsHex(this Color c) =>
 		"#" + c.r.ToString("X2") + c.g.ToString("X2") + c.b.ToString("X2");
 
-	public static Vector4 AsVec4(this Color c) => new Vector4(c.r, c.g, c.b, c.a);
+	public static Vector4 AsVec4(this Color c) => new(c.r, c.g, c.b, c.a);
 
-	public static Color Randomize(this Color c) =>
-		new Color(Random.value, Random.value, Random.value, c.a);
+	public static Color Randomize(this Color c) => new(Random.value, Random.value, Random.value, c.a);
 	
 	public static Color GetRandom(this Gradient g) => g.Evaluate(Random.value);
 #endregion
 
 #region Collections
-	private static System.Random _random = new System.Random();
+	private static System.Random _random = new();
 
 	public static T GetWeightedRandom<T>(this IEnumerable<T> itemsEnumerable,
 		Func<T, int> weightKey)
@@ -727,7 +677,7 @@ public static class Seb
 		if (list.Contains(item)) { list.Remove(item); }
 	}
 
-	private static System.Random _rng = new System.Random();
+	private static System.Random _rng = new();
 
 	public static void Shuffle<T>(this IList<T> list)
 	{
@@ -1134,7 +1084,7 @@ public enum Axis { X, Y, Z }
 public static class Directions
 {
 	private static Dictionary<Direction3, Vector3> direction3Vector3 =
-		new Dictionary<Direction3, Vector3>
+		new()
 		{
 			{ Direction3.Right, Vector3.right },
 			{ Direction3.Left, Vector3.left },
@@ -1145,7 +1095,7 @@ public static class Directions
 		};
 
 	private static Dictionary<Direction3, Vector3Int> direction3VectorInt =
-		new Dictionary<Direction3, Vector3Int>
+		new()
 		{
 			{ Direction3.Right, Vector3Int.right },
 			{ Direction3.Left, Vector3Int.left },
@@ -1192,7 +1142,35 @@ public static class Directions
 		};
 }
 
+public class SDictionary<TKey, TValue> : Dictionary<TKey, TValue>, ISerializationCallbackReceiver
+{
+	[SerializeField, HideInInspector]
+	private List<TKey> keyData = new();
+	
+	[SerializeField, HideInInspector]
+	private List<TValue> valueData = new();
 
+	void ISerializationCallbackReceiver.OnAfterDeserialize()
+	{
+		Clear();
+		for (int i = 0; i < keyData.Count && i < valueData.Count; i++)
+		{
+			this[keyData[i]] = valueData[i];
+		}
+	}
+
+	void ISerializationCallbackReceiver.OnBeforeSerialize()
+	{
+		keyData.Clear();
+		valueData.Clear();
+
+		foreach (KeyValuePair<TKey, TValue> item in this)
+		{
+			keyData.Add(item.Key);
+			valueData.Add(item.Value);
+		}
+	}
+}
 
 [Serializable]
 public struct Vector3IntRange
@@ -1233,7 +1211,7 @@ public struct Vector3IntRange
 
 	public Vector2Int rangeX
 	{
-		get => new Vector2Int(min.x, max.x);
+		get => new(min.x, max.x);
 		set
 		{
 			min = min.SetX(value.x);
@@ -1242,7 +1220,7 @@ public struct Vector3IntRange
 	}
 	public Vector2Int rangeY
 	{
-		get => new Vector2Int(min.y, max.y);
+		get => new(min.y, max.y);
 		set
 		{
 			min = min.SetY(value.x);
@@ -1251,7 +1229,7 @@ public struct Vector3IntRange
 	}
 	public Vector2Int rangeZ
 	{
-		get => new Vector2Int(min.z, max.z);
+		get => new(min.z, max.z);
 		set
 		{
 			min = min.SetZ(value.x);
@@ -1260,7 +1238,7 @@ public struct Vector3IntRange
 	}
 
 	public Vector3Int GetRandom(bool maxInclusive = false) =>
-		new Vector3Int(
+		new(
 			Random.Range(min.x, max.x + maxInclusive.AsInt()),
 			Random.Range(min.y, max.y + maxInclusive.AsInt()),
 			Random.Range(min.z, max.z + maxInclusive.AsInt()));
@@ -1280,7 +1258,7 @@ public struct Vector3Range
 
 	public Vector2 rangeX
 	{
-		get => new Vector2(min.x, max.x);
+		get => new(min.x, max.x);
 		set
 		{
 			min = min.SetX(value.x);
@@ -1289,7 +1267,7 @@ public struct Vector3Range
 	}
 	public Vector2 rangeY
 	{
-		get => new Vector2(min.y, max.y);
+		get => new(min.y, max.y);
 		set
 		{
 			min = min.SetY(value.x);
@@ -1298,7 +1276,7 @@ public struct Vector3Range
 	}
 	public Vector2 rangeZ
 	{
-		get => new Vector2(min.z, max.z);
+		get => new(min.z, max.z);
 		set
 		{
 			min = min.SetZ(value.x);
@@ -1307,7 +1285,7 @@ public struct Vector3Range
 	}
 
 	public Vector3 GetRandom() =>
-		new Vector3(Random.Range(min.x, max.x),
+		new(Random.Range(min.x, max.x),
 			Random.Range(min.y, max.y),
 			Random.Range(min.z, max.z));
 }
@@ -1326,7 +1304,7 @@ public struct Vector2Range
 
 	public Vector2 rangeX
 	{
-		get => new Vector2(min.x, max.x);
+		get => new(min.x, max.x);
 		set
 		{
 			min = min.SetX(value.x);
@@ -1335,7 +1313,7 @@ public struct Vector2Range
 	}
 	public Vector2 rangeY
 	{
-		get => new Vector2(min.y, max.y);
+		get => new(min.y, max.y);
 		set
 		{
 			min = min.SetY(value.x);
@@ -1344,7 +1322,7 @@ public struct Vector2Range
 	}
 
 	public Vector2 GetRandom() =>
-		new Vector2(Random.Range(min.x, max.x),
+		new(Random.Range(min.x, max.x),
 			Random.Range(min.y, max.y));
 }
 
@@ -1472,7 +1450,7 @@ public class Bictionary<T1, T2> : Dictionary<T1, T2>
 	}
 }
 
-public class Map<TKey,TValue> : Dictionary<TKey,TValue>
+public class Map<TKey,TValue> : SDictionary<TKey,TValue>
 {
 	public new TValue this [TKey key]
 	{
@@ -1536,7 +1514,7 @@ public struct Transformation
 	}
 
 	public static Transformation operator+(Transformation a, Transformation b) =>
-		new Transformation(a.position + b.position, a.rotation * b.rotation,
+		new(a.position + b.position, a.rotation * b.rotation,
 			a.scale.Multiply(b.scale));
 }
 
