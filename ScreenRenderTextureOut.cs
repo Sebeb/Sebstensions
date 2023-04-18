@@ -21,13 +21,6 @@ public class ScreenRenderTextureOut : CustomMono
     public float downsampling;
     [PreviewField(100, ObjectFieldAlignment.Center)]
     public RenderTexture preview;
-    private Vector2 prevScreenSize;
-
-    void Update()
-    {
-        if (Seb.screenSize == prevScreenSize) { return; }
-        BindRenderTexture();
-    }
     
     protected override void OnEditorAwake() => OnEnable();
     private void OnEnable()
@@ -38,6 +31,12 @@ public class ScreenRenderTextureOut : CustomMono
 
     private void BindRenderTexture()
     {
+        if (preview != null)
+        {
+            preview.Release();
+            preview = null;
+        }
+        
         if (!cam || Screen.width < 50) { return; }
 
         cam.targetTexture = preview = new RenderTexture((int)(Screen.width / downsampling),
