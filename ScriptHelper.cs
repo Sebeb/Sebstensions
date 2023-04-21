@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
+
 [DefaultExecutionOrder(-110)
 #if UNITY_EDITOR
  , ExecuteInEditMode
@@ -34,10 +35,11 @@ public class ScriptHelper : MonoBehaviour
         return mono.StartCoroutine(routine);
     }
 
+    private static bool fakeStart;
     [
-		#if UNITY_EDITOR
+    #if UNITY_EDITOR
         InitializeOnLoadMethod,
-		#endif
+    #endif
         RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     public static ScriptHelper Init()
     {
@@ -53,13 +55,23 @@ public class ScriptHelper : MonoBehaviour
         else
         {
             _instance = runnerObj.GetComponent<ScriptHelper>();
-            _instance.Start();
+            fakeStart = true;
         }
 
         runnerObj.hideFlags = HideFlags.HideAndDontSave;
 
         return _instance;
     }
+    
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void FakeStart()
+    {
+        if (!fakeStart) return;
+
+        fakeStart = false;
+        _instance.Start();
+    }
+    
 
     private void Update()
     {

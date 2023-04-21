@@ -67,12 +67,9 @@ public abstract class ScriptableMonoObject : ScriptableObject, ISerializationCal
 
 	public static void StartMonoScripts()
 	{
-		if (!Application.isPlaying)
-		{
-			return;
-		}
+		if (!Application.isPlaying) return;
 
-		foreach (ScriptableMonoObject monoScript in ScriptableMonoObject.monoScripts)
+		foreach (ScriptableMonoObject monoScript in monoScripts)
 		{
 			monoScript.ScriptAwake();
 		}
@@ -93,7 +90,7 @@ public abstract class ScriptableMonoObject : ScriptableObject, ISerializationCal
 
 	public static void ResetMonoScripts()
 	{
-		foreach (ScriptableMonoObject monoScript in ScriptableMonoObject.monoScripts)
+		foreach (ScriptableMonoObject monoScript in monoScripts)
 		{
 			monoScript.ScriptReset();
 		}
