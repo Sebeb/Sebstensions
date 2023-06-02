@@ -43,6 +43,7 @@ public class ScriptHelper : MonoBehaviour
         RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     public static ScriptHelper Init()
     {
+        // Debug.Log("Initing");
         if (_instance != null) { return _instance; }
 
         GameObject runnerObj = GameObject.Find("Script Helper");
@@ -58,7 +59,7 @@ public class ScriptHelper : MonoBehaviour
             fakeStart = true;
         }
 
-        runnerObj.hideFlags = HideFlags.HideAndDontSave;
+        runnerObj.hideFlags = HideFlags.DontSave;
 
         return _instance;
     }
@@ -81,7 +82,11 @@ public class ScriptHelper : MonoBehaviour
             CustomMono.OnScreenSizeChange?.Invoke();
         }
     }
-    private void Start() => ScriptableMonoObject.StartMonoScripts();
+    private void Start()
+    {
+        ScriptableMonoObject.StartMonoScripts();
+        CustomMono.OnScreenSizeChange?.Invoke();
+    }
 
     private void OnApplicationQuit()
     {

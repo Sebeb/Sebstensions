@@ -1,34 +1,27 @@
+using Nrjwolf.Tools.AttachAttributes;
 using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 
+[ExecuteInEditMode]
 public class ScreenRenderTextureOut : CustomMono
 {
-    [SerializeField]
-    private Camera _cam;
-    private Camera cam
-    {
-        get
-        {
-            if (!_cam) { _cam = GetComponent<Camera>(); }
-            return _cam;
-        }
-        set => _cam = value;
-    }
+    [SerializeField, GetComponent]
+    private Camera cam;
     public string bufferName;
-    public GraphicsFormat format;
+    public GraphicsFormat format = GraphicsFormat.R32G32B32A32_SFloat;
     [Range(1, 5)]
-    public float downsampling;
+    public float downsampling = 1;
     [PreviewField(100, ObjectFieldAlignment.Center)]
     public RenderTexture preview;
     
-    protected override void OnEditorAwake() => OnEnable();
     private void OnEnable()
     {
         OnScreenSizeChange += BindRenderTexture;
         BindRenderTexture();
     }
 
+    [Button]
     private void BindRenderTexture()
     {
         if (preview != null)
@@ -47,8 +40,13 @@ public class ScreenRenderTextureOut : CustomMono
     private void OnDisable()
     {
         OnScreenSizeChange -= BindRenderTexture;
+        if (preview != null)
+        {
+            preview.Release();
+            preview = null;
+        }
         if (!cam) { return; }
 
-        _cam.targetTexture = null;
+        cam.targetTexture = null;
     }
 }

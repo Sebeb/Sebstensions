@@ -5,7 +5,6 @@ using UnityEngine;
 using UnityEditor;
 
 
-[ShowOdinSerializedPropertiesInInspector]
 public abstract class CustomMono : MonoBehaviour
 {
 	protected static bool quitting => ScriptHelper.quitting;

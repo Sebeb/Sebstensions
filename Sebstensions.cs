@@ -3,7 +3,11 @@ using System.IO;
 using System.Linq;
 using System;
 using System.Collections;
+using System.Globalization;
 using System.Runtime.Serialization;
+using Sirenix.OdinInspector;
+using Sirenix.Serialization;
+using Sirenix.Utilities;
 using UnityEngine.UI;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -351,6 +355,23 @@ public static class Seb
 		to.SetSiblingIndex(from.GetSiblingIndex());
 	}
 
+	public static void CopyFrom(this RectTransform to, RectTransform from, bool includeParent = true)
+	{
+		if (includeParent)
+		{
+			to.parent = from.parent;
+		}
+
+		to.anchorMin = from.anchorMin;
+		to.anchorMax = from.anchorMax;
+		to.position = from.position;
+		to.localScale = from.localScale;
+		to.rotation = from.rotation;
+		to.rect.SetWidth(from.rect.width);
+		to.rect.SetHeight(from.rect.height);
+		to.SetSiblingIndex(from.GetSiblingIndex());
+	}
+
 	public static Transform GetSceneLevelParent(this Transform t)
 	{
 		while (t.parent != null)
@@ -571,6 +592,7 @@ public static class Seb
 	{
 		if (String.IsNullOrEmpty(value))
 			throw new ArgumentException("the string to find may not be empty", "value");
+
 		List<int> indexes = new List<int>();
 		for (int index = 0;; index += value.Length)
 		{
@@ -838,6 +860,36 @@ public static class Seb
 		keys.Zip(values, (key, value) => new { key, value })
 			.ToDictionary(val => val.key, val => val.value);
 
+	//https://stackoverflow.com/questions/12172162/how-to-insert-item-into-list-in-order
+	public static void SortedAdd<T>(this List<T> @this, T item) where T : IComparable<T>
+	{
+		if (@this.Count == 0)
+		{
+			@this.Add(item);
+			return;
+		}
+
+		if (@this[@this.Count - 1].CompareTo(item) <= 0)
+		{
+			@this.Add(item);
+			return;
+		}
+
+		if (@this[0].CompareTo(item) >= 0)
+		{
+			@this.Insert(0, item);
+			return;
+		}
+
+		int index = @this.BinarySearch(item);
+		if (index < 0)
+			index = ~index;
+		@this.Insert(index, item);
+	}
+
+	public static int IndexOf<T>(this T[] array, T value)
+		=> Array.IndexOf(array, value);
+
 	#endregion
 
 	#region GameObject
@@ -995,11 +1047,9 @@ public static class Seb
 				Camera.MonoOrStereoscopicEye.Mono,
 				corners);
 
-			Vector3 bottomLeft = camera.transform.position +
-				camera.transform.TransformVector(corners[0]);
+			Vector3 bottomLeft = camera.transform.position + camera.transform.TransformVector(corners[0]);
 
-			Vector3 topRight = camera.transform.position +
-				camera.transform.TransformVector(corners[2]);
+			Vector3 topRight = camera.transform.position + camera.transform.TransformVector(corners[2]);
 
 			return new Rect(bottomLeft, topRight - bottomLeft);
 		}
@@ -1255,6 +1305,7 @@ public static class Seb
 		IEnumerator WaitForFramesCoroutine(int frames, Action action)
 		{
 			for (int i = 0; i < frames; i++) yield return null;
+
 			action();
 		}
 	}
@@ -1262,6 +1313,164 @@ public static class Seb
 	#endregion
 
 }
+
+[Serializable]
+public class Timer
+{
+	[NonSerialized, ShowInInspector, DisplayTime]
+	public float startTime = 0;
+
+	public enum State
+	{
+		Stopped,
+		Running,
+		Paused,
+		Completed
+	}
+
+	[NonSerialized, ShowInInspector, DisplayTime("state")]
+	public float elapsedTime;
+	public Func<float> timeFunction = () => Time.time;
+	[SerializeField] private State state;
+	[FoldoutGroup("Settings")] public bool autoUpdate = true;
+	[FoldoutGroup("Settings")] public bool stopOnComplete = true;
+	[DisplayTimerActions("elapsedTime")]
+	public SDictionary<float, Action> actions = new();
+
+	public Timer(float duration, Action onComplete)
+	{
+		actions.Add(duration, onComplete);
+	}
+
+	public void AddAction(float time, Action action)
+	{
+		if (!actions.ContainsKey(time))
+		{
+			actions.Add(time, action);
+		}
+		else
+		{
+			actions[time] += action;
+		}
+	}
+
+	public void RemoveAction(Action action)
+	{
+		foreach (float key in actions.Keys)
+		{
+			actions[key] -= action;
+		}
+	}
+
+	public Timer() {}
+
+	public void Start()
+	{
+		Reset();
+		Resume();
+	}
+
+	public void Reset()
+	{
+		startTime = timeFunction();
+		nextEventTime = -1;
+		elapsedTime = 0;
+		state = State.Stopped;
+	}
+
+	public void Pause()
+	{
+		state = State.Paused;
+	}
+
+	public void Resume()
+	{
+		if (!Application.isPlaying)
+		{
+			Debug.LogError("Timer can only run in play mode");
+			return;
+		}
+		if (!autoUpdate) return;
+
+		state = State.Running;
+		ScriptHelper.DoCoroutine(CoroAutoUpdate());
+	}
+
+	private IEnumerator CoroAutoUpdate()
+	{
+		while (state == State.Running)
+		{
+			Update();
+			yield return null;
+		}
+	}
+
+	public void Update()
+	{
+		if (actions.Any() && elapsedTime >= nextEventTime)
+		{
+			if (actions.TryGetValue(nextEventTime, out Action action)) action?.Invoke();
+
+			nextEventTime = actions.Keys.OrderBy(k => k).FirstOrDefault(k => k > nextEventTime);
+		}
+
+		elapsedTime = timeFunction() - startTime;
+		if (nextEventTime == 0)
+		{
+			if (stopOnComplete)
+			{
+				Pause();
+				state = State.Completed;
+			}
+			else
+			{
+				nextEventTime = float.MaxValue;
+			}
+		}
+		if (!autoUpdate)
+		{
+			state = State.Paused;
+		}
+	}
+
+	float nextEventTime = -1;
+
+	public static string ToHhMmSs(float time, int decimalPlaces = 2)
+	{
+		int hours = Mathf.Abs((int)time / 3600);
+		int minutes = Mathf.Abs((int)(time - hours * 3600) / 60);
+		float seconds = Mathf.Abs((time - hours * 3600 - minutes * 60)).Round(decimalPlaces);
+		char sign = time < 0 ? '-' : ' ';
+		float decimalPart = seconds - (int)seconds;
+		string output = "" + sign;
+		if (hours > 0) output += hours + ":";
+		output += minutes.ToString("00") + ":";
+		output += seconds.ToString("00" + (decimalPlaces <= 0 ? "" : "." + new string('0', decimalPlaces)));
+		return output;
+	}
+}
+
+[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+public class DisplayTimeAttribute : Attribute
+{
+	public string GetState;
+
+	public DisplayTimeAttribute(string getState = null)
+	{
+		GetState = getState;
+	}
+}
+
+public class DisplayTimerActionsAttribute : Attribute
+{
+	public string GetElapsedTime;
+
+	public DisplayTimerActionsAttribute(string getElapsedTime)
+	{
+		GetElapsedTime = getElapsedTime;
+	}
+}
+
 
 public enum Direction3
 {
@@ -1335,7 +1544,39 @@ public static class Directions
 		};
 }
 
+[Serializable]
 public class SDictionary<TKey, TValue> : Dictionary<TKey, TValue>, ISerializationCallbackReceiver
+{
+	[SerializeField, HideInInspector]
+	private List<TKey> keyData = new();
+
+	[SerializeField, HideInInspector]
+	private List<TValue> valueData = new();
+
+	void ISerializationCallbackReceiver.OnAfterDeserialize()
+	{
+		Clear();
+		for (int i = 0; i < keyData.Count && i < valueData.Count; i++)
+		{
+			this[keyData[i]] = valueData[i];
+		}
+	}
+
+	void ISerializationCallbackReceiver.OnBeforeSerialize()
+	{
+		keyData.Clear();
+		valueData.Clear();
+
+		foreach (KeyValuePair<TKey, TValue> item in this)
+		{
+			keyData.Add(item.Key);
+			valueData.Add(item.Value);
+		}
+	}
+}
+
+[Serializable]
+public class SSortedDictionary<TKey, TValue> : SortedDictionary<TKey, TValue>, ISerializationCallbackReceiver
 {
 	[SerializeField, HideInInspector]
 	private List<TKey> keyData = new();
@@ -1663,20 +1904,36 @@ public class Bictionary<T1, T2> : Dictionary<T1, T2>
 		{
 			if (!this.Any(x => x.Value.Equals(index)))
 				throw new KeyNotFoundException();
+
 			return this.First(x => x.Value.Equals(index)).Key;
 		}
 	}
 }
 
+[Serializable]
 public class Map<TKey, TValue> : SDictionary<TKey, TValue>
 {
 	public new TValue this[TKey key]
 	{
-		get => ContainsKey(key) ? base[key] : defaultValue;
+		get
+		{
+			if (!ContainsKey(key))
+			{
+				Add(key, emptyValueIniter != null ? emptyValueIniter.Invoke() : defaultValue);
+			}
+
+			return base[key];
+		}
 		set => base[key] = value;
 	}
 
+	private readonly Func<TValue> emptyValueIniter;
 	private readonly TValue defaultValue;
+
+	public Map(Func<TValue> emptyValueIniter)
+	{
+		this.emptyValueIniter = emptyValueIniter;
+	}
 
 	public Map(TValue defaultValue = default)
 	{
@@ -1855,7 +2112,8 @@ public static class Reflection
 	{
 		return AppDomain.CurrentDomain.GetAssemblies()
 			.SelectMany(assembly => assembly.GetTypes())
-			.Where(type => type.IsSubclassOf(typeof(T))
+			.Where(type => !type.ContainsGenericParameters
+				&& type.IsSubclassOf(typeof(T))
 				&& !type.ContainsGenericParameters
 				&& !type.IsAbstract
 				&& type.GetConstructor(Type.EmptyTypes) != null)
@@ -1866,7 +2124,8 @@ public static class Reflection
 	{
 		return AppDomain.CurrentDomain.GetAssemblies()
 			.SelectMany(assembly => assembly.GetTypes())
-			.Where(type => type.IsSubclassOf(typeof(T))
+			.Where(type => !type.ContainsGenericParameters
+				&& type.IsSubclassOf(typeof(T))
 				&& type.BaseType?.GenericTypeArguments.FirstOrDefault() == type)
 			.Select(type => Activator.CreateInstance(type) as T);
 	}
@@ -1874,6 +2133,7 @@ public static class Reflection
 
 namespace ProbabilityExtensions
 {
+
 	public static class ProbabilityExtensions
 	{
 		public static bool getPercentChance(this int chance) => Random.value * 100 < chance;
