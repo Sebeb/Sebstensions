@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
 using Sirenix.OdinInspector.Editor.ValueResolvers;
 using Sirenix.Utilities;
+using Sirenix.Utilities.Editor;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Events;
 
 
 public class DisplayTimeAttributeDrawer : OdinAttributeDrawer<DisplayTimeAttribute, float>
@@ -20,26 +23,26 @@ public class DisplayTimeAttributeDrawer : OdinAttributeDrawer<DisplayTimeAttribu
 			: ValueResolver.Get<Timer.State>(Property, Attribute.GetState);
 	}
 
-	public static Color StateToColor(Timer.State state)
+	public static Color StateToColor(Timer.State state) => StateToColor(state, EditorGUIUtility.isProSkin);
+	public static Color StateToColor(Timer.State state, bool bright)
 	{
-		bool dark = EditorGUIUtility.isProSkin;
 		switch (state)
 		{
 			case Timer.State.Stopped:
-				return dark
+				return bright
 					? new Color(1f, 0.22f, 0.25f)
 					: new Color(0.57f, 0f, 0f);
 			case Timer.State.Paused:
-				return dark
+				return bright
 					? new Color(1f, 0.53f, 0.26f)
 					: new Color(0.64f, 0.17f, 0f);
 			case Timer.State.Running:
-				return dark
+				return bright
 					? new Color(0.49f, 1f, 0.47f)
-					: new Color(0f, 0.56f, 0f);
+					: new Color(0f, 0.44f, 0f);
 
 			case Timer.State.Completed:
-				return dark
+				return bright
 					? new Color(0f, 1f, 0.91f)
 					: new Color(0f, 0.05f, 0.61f);
 
@@ -84,7 +87,28 @@ public class DisplayTimerActionsDrawer : OdinAttributeDrawer<DisplayTimerActions
 			Rect rect = EditorGUILayout.GetControlRect();
 			float elapsed = stateResolver?.GetValue() ?? 0;
 			float remaining = elapsed < time ? time - elapsed : 0;
-			EditorGUI.ProgressBar(rect, elapsed == 0 ? 1 : elapsed / time, $"{Timer.ToHhMmSs(remaining, 0)} : {action.Method.Name}");
+
+			// Draw the health bar.
+			float width = Mathf.Clamp01(elapsed / time);
+			SirenixEditorGUI.DrawSolidRect(rect, new Color(0f, 0f, 0f, 0.3f), false);
+			SirenixEditorGUI.DrawSolidRect(rect.SetWidth(rect.width * width), DisplayTimeAttributeDrawer.StateToColor(remaining > 0 ? Timer.State.Running : Timer.State.Completed, false), false);
+			
+			//Label remaining time
+			var style = new GUIStyle(GUI.skin.label)
+			{
+				alignment = TextAnchor.MiddleRight,
+				normal =
+				{
+					textColor = Color.white
+				},
+				fontSize = 10,
+				fontStyle = FontStyle.Bold
+			};
+			EditorGUI.LabelField(rect, (remaining > 0 ? Timer.ToHhMmSs(remaining, 0) : "Completed!") + "  ", style) ;
+			style.alignment = TextAnchor.MiddleLeft;
+			EditorGUI.LabelField(rect, $"{Timer.ToHhMmSs(time, 0)} : {action.Method.Name}", style);
+
+			SirenixEditorGUI.DrawBorders(rect, 1);
 		}
 	}
 }

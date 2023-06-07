@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Sirenix.OdinInspector;
+using Sirenix.Utilities;
 using UnityEditor;
 using UnityEngine;
 
@@ -51,18 +52,27 @@ public abstract class ScriptableMonoObject : ScriptableObject, ISerializationCal
 	{
 		get
 		{
-			//Update monoscripts listing if not previously updated or if we're in the editor
-			if (Application.isEditor || _monoScripts == null || _monoScripts.Length == 0)
-			{
-				_monoScripts = Resources.LoadAll<ScriptableMonoObject>("");
-				_monoScriptsByType = Resources.LoadAll<ScriptableMonoObject>("")
-					.GroupBy(m => m.GetType())
-					.ToDictionary(g => g.Key, g => g.ToArray());
-			}
-
+			TryUpdateMonoObjects();
 			return _monoScripts;
 		}
-		set => _monoScripts = value;
+	}
+
+	private static bool TryUpdateMonoObjects()
+	{
+		//Update monoscripts listing if not previously updated or if we're in the editor
+		if (Application.isEditor || _monoScripts == null || _monoScripts.Length == 0)
+		{
+			_monoScripts = Resources.LoadAll<ScriptableMonoObject>("");
+			_monoScriptsByType = Resources.LoadAll<ScriptableMonoObject>("")
+				.SelectMany(m => m.GetType().GetBaseTypes().PrependWith(m.GetType())
+					.Select(t => new Tuple <Type, ScriptableMonoObject>(t, m)))
+				.Where(t => t != null)
+				.GroupBy(t => t.Item1, t => t.Item2)
+				.ToDictionary(g => g.Key, g => g.ToArray());
+			return true;
+		}
+
+		return false;
 	}
 
 	public static void StartMonoScripts()
@@ -100,9 +110,11 @@ public abstract class ScriptableMonoObject : ScriptableObject, ISerializationCal
 	public virtual void ScriptAwake() {}
 	public virtual void ScriptReset() {}
 
-	public static IEnumerable<T> GetAllScriptables<T>() where T : ScriptableMonoObject
-		=>
-			monoScripts.Length == 0 ? null : _monoScriptsByType[typeof(T)].Cast<T>();
+	public static IEnumerable<T> GetAllScriptables<T>()
+	{
+		TryUpdateMonoObjects();
+		return monoScripts.Length == 0 ? null : _monoScriptsByType[typeof(T)].Cast<T>();
+	}
 
 
 	public static T GetScriptableSingleton<T>() where T : ScriptableMonoObject =>

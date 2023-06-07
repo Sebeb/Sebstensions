@@ -10,6 +10,7 @@ using Sirenix.Serialization;
 using Sirenix.Utilities;
 using UnityEngine.UI;
 using UnityEngine;
+using UnityEngine.Events;
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
 #if UNITY_EDITOR
@@ -1231,7 +1232,8 @@ public static class Seb
 		return newPath;
 
 	}
-
+	
+	/// <returns>True if folder already exists, false if it was created</returns>
 	public static bool EnsureFolderExists(this string path)
 	{
 		if (Directory.Exists(path))
@@ -1350,6 +1352,7 @@ public class Timer
 		}
 		else
 		{
+			actions[time] -= action;
 			actions[time] += action;
 		}
 	}
@@ -1390,6 +1393,7 @@ public class Timer
 			Debug.LogError("Timer can only run in play mode");
 			return;
 		}
+
 		if (!autoUpdate) return;
 
 		state = State.Running;
@@ -1427,6 +1431,7 @@ public class Timer
 				nextEventTime = float.MaxValue;
 			}
 		}
+
 		if (!autoUpdate)
 		{
 			state = State.Paused;
@@ -2112,22 +2117,28 @@ public static class Reflection
 	{
 		return AppDomain.CurrentDomain.GetAssemblies()
 			.SelectMany(assembly => assembly.GetTypes())
-			.Where(type => !type.ContainsGenericParameters
-				&& type.IsSubclassOf(typeof(T))
-				&& !type.ContainsGenericParameters
-				&& !type.IsAbstract
-				&& type.GetConstructor(Type.EmptyTypes) != null)
+			.Where(t => !t.ContainsGenericParameters
+				&& t.IsSubclassOf(typeof(T))
+				&& !t.ContainsGenericParameters
+				&& !t.IsAbstract
+				&& t.GetConstructor(Type.EmptyTypes) != null)
 			.Select(type => Activator.CreateInstance(type) as T);
 	}
 
-	public static IEnumerable<T> GetAllSingletonScriptChildren<T>() where T : class
+	public static Dictionary<Type, IEnumerable<Type>> GetAllSingletonScriptChildrenTypes<T>() where T : class
 	{
 		return AppDomain.CurrentDomain.GetAssemblies()
 			.SelectMany(assembly => assembly.GetTypes())
-			.Where(type => !type.ContainsGenericParameters
-				&& type.IsSubclassOf(typeof(T))
-				&& type.BaseType?.GenericTypeArguments.FirstOrDefault() == type)
-			.Select(type => Activator.CreateInstance(type) as T);
+			.Where(t => !t.ContainsGenericParameters
+				&& t.IsSubclassOf(typeof(T))
+				&& t.GetConstructor(Type.EmptyTypes) != null
+				&& !t.IsAbstract)
+			.Select(t =>
+				new Tuple<Type, IEnumerable<Type>>(t,
+					t.GetBaseClasses().PrependWith(t)))
+			.Where(p => p.Item2.Any(t => t.BaseType is { IsConstructedGenericType: true }
+				&& t.BaseType.GenericTypeArguments.Contains(t)))
+			.ToDictionary(p => p.Item1, p => p.Item2.TakeWhile(t => t != typeof(T)));
 	}
 }
 

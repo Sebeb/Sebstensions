@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using Sirenix.Utilities;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -44,8 +46,11 @@ public abstract class SingletonScriptableObject<T> : ScriptableMonoObject
 			if (instances.Length > 1)
 			{
 			#if UNITY_EDITOR
-				Debug.LogError("Multiple " + _i.GetType() + " detected. Using " +
-					AssetDatabase.GetAssetPath(instances[0]) + ". Consider destorying imposters.");
+				Debug.LogError("Multiple "
+					+ _i.GetType()
+					+ " detected. Using "
+					+ AssetDatabase.GetAssetPath(instances[0])
+					+ ". Consider destroying imposters.");
 			#endif
 			}
 
@@ -73,32 +78,53 @@ public abstract class SingletonScriptableObject<T> : ScriptableMonoObject
 public class ScriptableSingletonHelper : MonoBehaviour
 {
 #if UNITY_EDITOR
-	[UnityEditor.Callbacks.DidReloadScripts]
+	private static readonly string[] systemFileWords = { "Settings", "Manager", "Singleton", "Scriptable", "Object" };
+
+	public static string ClassTypesToDirectory(IEnumerable<Type> baseTypes)
+	{
+		var path = string.Join("/",
+			baseTypes.Reverse()
+				.Select(t => t.GetNiceName()
+					.Split('<')[0]
+					.NormalizeCamel()
+					.Split(' '))
+				.Select(ws => string.Join(' ', (systemFileWords.Contains(ws.Last()) ? ws.SkipLast(1) : ws))));
+		path += 's';
+		return path;
+	}
+
+	[UnityEditor.Callbacks.DidReloadScripts, MenuItem("Tools/Refresh Singletons")]
 	public static void DebugSingletons()
 	{
 		bool assetsMade = false;
-		IEnumerable<ScriptableMonoObject> singletons =
-			Reflection.GetAllSingletonScriptChildren<ScriptableMonoObject>();
+		Dictionary<Type, IEnumerable<Type>> singletons =
+			Reflection.GetAllSingletonScriptChildrenTypes<ScriptableMonoObject>();
 
-		foreach (ScriptableMonoObject monoObject in singletons)
+		foreach ((Type monoObjectType, IEnumerable<Type> parentTypes) in singletons)
 		{
-			string[] guids = AssetDatabase.FindAssets("t:" + monoObject.GetType());
-			string name = monoObject.GetType().ToString().NormalizeCamel();
+			string[] guids = AssetDatabase.FindAssets("t:" + monoObjectType);
+			string name = monoObjectType.ToString().NormalizeCamel();
 			if (guids.Length > 1)
 			{
 				Debug.Log(
-					$"Multiple instances of {monoObject.GetType()} found at:{string.Join("\n", guids.Select(AssetDatabase.GUIDToAssetPath))}");
+					$"Multiple instances of {monoObjectType} found at:{string.Join("\n", guids.Select(AssetDatabase.GUIDToAssetPath))}");
 			}
 			else if (guids.Length == 0)
 			{
-				Debug.Log($"No instance of type {name} found");
+				// Debug.Log($"No instance of type {name} found");
 
 				ScriptableObject newSingleton =
-					ScriptableObject.CreateInstance(monoObject.GetType());
-				string path = $"Assets/Resources/{name}.asset";
-				AssetDatabase.CreateAsset(newSingleton, path);
+					ScriptableObject.CreateInstance(monoObjectType);
+
+				string typesPath = parentTypes.Count() <= 2 ? ""
+					: ClassTypesToDirectory(parentTypes.Skip(1).SkipLast(1)) + '/';
+				string path = $"Assets/Resources/{typesPath}";
+				string assetPath = path + name + ".asset";
+				path.EnsureFolderExists();
+
+				AssetDatabase.CreateAsset(newSingleton, assetPath);
 				assetsMade = true;
-				Debug.Log("Created new settings at " + path);
+				Debug.Log("Created new settings at " + assetPath);
 			}
 		}
 
