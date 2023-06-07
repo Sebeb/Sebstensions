@@ -53,19 +53,19 @@ public class DisplayTimeAttributeDrawer : OdinAttributeDrawer<DisplayTimeAttribu
 
 	protected override void DrawPropertyLayout(GUIContent label)
 	{
+
 		float time = ValueEntry.SmartValue;
 		Rect rect = EditorGUILayout.GetControlRect();
-		GUIStyle style = new GUIStyle(GUI.skin.label);
+		GUIStyle style = new GUIStyle(GUI.skin.textField);
 		if (stateResolver != null)
 		{
-			style.hover.textColor =
-				style.focused.textColor =
-					style.normal.textColor = StateToColor(stateResolver.GetValue());
+			style.normal.textColor = StateToColor(stateResolver.GetValue());
 		}
 
 		style.alignment = TextAnchor.MiddleRight;
 		style.fixedWidth = 75;
-		EditorGUI.TextField(rect, label, Timer.ToHhMmSs(time, 0), style);
+		
+		ValueEntry.SmartValue = Timer.FromHhMmSs(EditorGUI.TextField(rect, label, Timer.ToHhMmSs(time, Attribute.decimalPlaces), style));
 	}
 }
 

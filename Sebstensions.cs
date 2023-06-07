@@ -1232,7 +1232,7 @@ public static class Seb
 		return newPath;
 
 	}
-	
+
 	/// <returns>True if folder already exists, false if it was created</returns>
 	public static bool EnsureFolderExists(this string path)
 	{
@@ -1330,7 +1330,7 @@ public class Timer
 		Completed
 	}
 
-	[NonSerialized, ShowInInspector, DisplayTime("state")]
+	[NonSerialized, ShowInInspector, DisplayTime(getState: "state")]
 	public float elapsedTime;
 	public Func<float> timeFunction = () => Time.time;
 	[SerializeField] private State state;
@@ -1451,7 +1451,18 @@ public class Timer
 		if (hours > 0) output += hours + ":";
 		output += minutes.ToString("00") + ":";
 		output += seconds.ToString("00" + (decimalPlaces <= 0 ? "" : "." + new string('0', decimalPlaces)));
-		return output;
+		return output.Trim();
+	}
+
+	public static float FromHhMmSs(string time)
+	{
+		string[] split = time.Split(':');
+		float hours = split.Length < 3 ? 0
+			: float.TryParse(split[0], out float h) ? h : 0;
+		float minutes = split.Length < 2 ? 0
+			: float.TryParse(split[^2], out float m) ? m : 0;
+		float seconds = float.TryParse(split[^1], out float s) ? s : 0;
+		return hours * 3600 + minutes * 60 + seconds;
 	}
 }
 
@@ -1459,9 +1470,11 @@ public class Timer
 public class DisplayTimeAttribute : Attribute
 {
 	public string GetState;
+	public int decimalPlaces;
 
-	public DisplayTimeAttribute(string getState = null)
+	public DisplayTimeAttribute(int decimalPlaces = 0, string getState = null)
 	{
+		this.decimalPlaces = decimalPlaces;
 		GetState = getState;
 	}
 }
