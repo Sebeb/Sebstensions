@@ -15,7 +15,7 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 {
 	[ReadOnly]
 	public new string name;
-	private static readonly string[] systemFileWords = { "Singleton", "Scriptable" };
+	private static readonly string[] systemFileWords = { "Scriptable Object", "Scriptable", "Manager" };
 
 	public static string TypeToDirectory(Type type)
 	{
@@ -34,11 +34,11 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 		var path = string.Join("/",
 			baseTypes.Select(t => t.GetNiceName()
 					.Split('<')[0]
-					.NormalizeCamel()
-					.Split(' '))
-				.Select(ws => string.Join(' ', systemFileWords.Contains(ws.Last()) ? ws.SkipLast(1) : ws))
-				.Where(f => !f.IsNullOrEmpty())
-				.Select(f => f.Pluralize(inputIsKnownToBeSingular: false))
+					.NormalizeCamel())
+				.Select(s => systemFileWords.Aggregate(s, (current, word) => current.Replace(word, ""))
+					.Trim()
+					.Pluralize(inputIsKnownToBeSingular: false))
+				.Where(s => !string.IsNullOrEmpty(s))
 				.Skip(1)
 				.Prepend("Data"));
 		path += "/";
@@ -51,8 +51,8 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 	public static void MoveAllToDefaultLocation()
 	{
 		IEnumerable<(string, string)> oldNewPath = ScriptablesDatabase.Get(typeof(ScriptableMonoObject))
-			.Select(m => (AssetDatabase.GetAssetPath(m),
-				$"Assets/{TypeToDirectory(m.GetType())}{AssetDatabase.LoadMainAssetAtPath(AssetDatabase.GetAssetPath(m)).name}.asset"))
+			.Select(m => (m, AssetDatabase.GetAssetPath(m)))
+			.Select(ma => (ma.Item2, $"Assets/{TypeToDirectory(ma.Item1.GetType())}{ma.Item1.name}.asset"))
 			.Where(t => t.Item1 != t.Item2);
 
 		// Wait for user confirmaion
@@ -66,10 +66,11 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 		{
 			Path.GetDirectoryName(newPath).EnsureFolderExists();
 			AssetDatabase.MoveAsset(oldPath, newPath);
-		
+
 			Debug.Log($"Moving {oldPath} to {newPath}");
 		}
-		
+		AssetDatabase.SaveAssets();
+
 	}
 
 	public static ScriptableMonoObject CreateNew(Type type, string name = null)

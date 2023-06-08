@@ -7,20 +7,20 @@ using System.Runtime.Serialization.Formatters.Binary;
 using UnityEditor;
 using UnityEngine;
 
-
 [DefaultExecutionOrder(-999)]
-public class SettingsManager : SingletonScriptableObject<SettingsManager>
+public static class SettingsManager 
 {
 	private static Dictionary<Type, SettingsScriptable> boxDic;
 
-	public override void ScriptAwake()
+	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad), InitializeOnLoadMethod]
+	public static void OnScriptReload()
 	{
 		PopulateDic();
 		foreach (Type newType in ScriptablesDatabase.Get<SettingsScriptable>()
 			         .Select(s => s.settings.GetType())
 			         .Except<Type>(boxDic.Keys))
 		{
-			SettingsScriptable scriptable = CreateNew<SettingsScriptable>(newType.Name.NormalizeCamel()) as SettingsScriptable;
+			SettingsScriptable scriptable = ScriptableMonoObject.CreateNew<SettingsScriptable>(newType.Name.NormalizeCamel()) as SettingsScriptable;
 			scriptable.settings = Activator.CreateInstance(newType) as Settings;
 		}
 	}
@@ -32,18 +32,6 @@ public class SettingsManager : SingletonScriptableObject<SettingsManager>
 				new KeyValuePair<Type, SettingsScriptable>(((SettingsScriptable)t).settings.GetType(),
 					(SettingsScriptable)t)));
 	}
-
-	// [MenuItem("Tools/Convert List to Scriptable Objects")]
-	// public static void ConvertListToScriptableObjects()
-	// {
-	// 	boxDic = ScriptablesDatabase.Get<SettingsScriptable>().ToDictionary(s => s.GetType(), s => s.settings);
-	// 	foreach (Settings box in _i.boxes)
-	// 	{
-	// 		if (boxDic.ContainsKey(box.GetType())) continue;
-	//
-	// 		SettingsScriptable scriptable = CreateNew<SettingsScriptable>(box.GetType().Name.NormalizeCamel());
-	// 	}
-	// }
 
 	public static T1 GetSetting<T1>() where T1 : Settings, new()
 	{

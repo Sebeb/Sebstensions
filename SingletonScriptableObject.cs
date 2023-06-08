@@ -9,7 +9,6 @@ using UnityEngine;
 
 
 public interface ICacheable {}
-public interface ICacheable<T> {}
 
 /// <summary>
 /// Abstract class for making reload-proof singletons out of ScriptableObjects

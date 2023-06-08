@@ -51,7 +51,7 @@ public class ScriptablesDatabase : SerializedScriptableObject
 		return false;
 	}
 
-	[MenuItem("Tools/Scriptable Objects/Refresh Database"), Button]
+	[MenuItem("Tools/Scriptable Objects/Refresh Database"), Button, InitializeOnLoadMethod, RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
 	public static void Refresh()
 	{
 		IEnumerable<Type> cachableType = AppDomain.CurrentDomain.GetAssemblies()
@@ -89,7 +89,7 @@ public class ScriptablesDatabase : SerializedScriptableObject
 	}
 
 
-	public static IEnumerable<T> Get<T>() where T : ScriptableMonoObject =>
+	public static IEnumerable<T> Get<T>() =>
 		Get(typeof(T)).Cast<T>();
 
 	public static IEnumerable<ScriptableMonoObject> Get(Type type)
