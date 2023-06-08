@@ -1,19 +1,95 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using Sirenix.OdinInspector;
 using Sirenix.Utilities;
 using UnityEditor;
 using UnityEngine;
+using Weaver;
+using Humanizer;
 
 
-public abstract class ScriptableMonoObject : ScriptableObject, ISerializationCallbackReceiver
+public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerializationCallbackReceiver
 {
 	[ReadOnly]
 	public new string name;
-	private static ScriptableMonoObject[] _monoScripts;
-	private static Dictionary<Type, ScriptableMonoObject[]> _monoScriptsByType;
+	private static readonly string[] systemFileWords = { "Singleton", "Scriptable" };
+
+	public static string TypeToDirectory(Type type)
+	{
+		ScriptablesDatabase.Refresh();
+		IEnumerable<Type> baseTypes = type.GetBaseTypes(true)
+			.Where(t => !t.IsInterface)
+			.Reverse()
+			.SkipWhile(t => t != typeof(ScriptableMonoObject));
+		if (ScriptablesDatabase.Get(type).Count() == 1)
+		{
+			baseTypes = baseTypes.SkipLast(1);
+		}
+
+		if (!baseTypes.Any()) return "";
+
+		var path = string.Join("/",
+			baseTypes.Select(t => t.GetNiceName()
+					.Split('<')[0]
+					.NormalizeCamel()
+					.Split(' '))
+				.Select(ws => string.Join(' ', systemFileWords.Contains(ws.Last()) ? ws.SkipLast(1) : ws))
+				.Where(f => !f.IsNullOrEmpty())
+				.Select(f => f.Pluralize(inputIsKnownToBeSingular: false))
+				.Skip(1)
+				.Prepend("Data"));
+		path += "/";
+		return path;
+	}
+
+	public static T CreateNew<T>(string name = null) where T : ScriptableMonoObject => CreateNew(typeof(T), name) as T;
+
+	[MenuItem("Tools/Scriptable Objects/Reset Locations")]
+	public static void MoveAllToDefaultLocation()
+	{
+		IEnumerable<(string, string)> oldNewPath = ScriptablesDatabase.Get(typeof(ScriptableMonoObject))
+			.Select(m => (AssetDatabase.GetAssetPath(m),
+				$"Assets/{TypeToDirectory(m.GetType())}{AssetDatabase.LoadMainAssetAtPath(AssetDatabase.GetAssetPath(m)).name}.asset"))
+			.Where(t => t.Item1 != t.Item2);
+
+		// Wait for user confirmaion
+		if (!EditorUtility.DisplayDialog("Move Scriptable Objects",
+			    $"Move {oldNewPath.Count()} scriptable objects?\n"
+			    + string.Join("\n", oldNewPath.Select(t => $"{t.Item1} -> {t.Item2}")),
+			    "Yes",
+			    "No")) return;
+
+		foreach ((string oldPath, string newPath) in oldNewPath)
+		{
+			Path.GetDirectoryName(newPath).EnsureFolderExists();
+			AssetDatabase.MoveAsset(oldPath, newPath);
+		
+			Debug.Log($"Moving {oldPath} to {newPath}");
+		}
+		
+	}
+
+	public static ScriptableMonoObject CreateNew(Type type, string name = null)
+	{
+		if (!(CreateInstance(type) is ScriptableMonoObject newSingleton))
+		{
+			Debug.LogError("Could not create new singleton of type " + type.GetNiceFullName());
+			return null;
+		}
+
+		string path = $"Assets/{TypeToDirectory(type)}";
+		name ??= type.Name.NormalizeCamel();
+		string assetPath = path + name + ".asset";
+		path.EnsureFolderExists();
+
+		AssetDatabase.CreateAsset(newSingleton, assetPath);
+		AssetDatabase.SaveAssets();
+		Debug.Log($"Created new {type.Name.NormalizeCamel()} at {assetPath}");
+		return AssetDatabase.LoadAssetAtPath<ScriptableMonoObject>(assetPath);
+	}
 
 	protected void SetAssetName(string newName = null)
 	{
@@ -44,42 +120,17 @@ public abstract class ScriptableMonoObject : ScriptableObject, ISerializationCal
 
 	public virtual void OnBeforeSerialize() => SetAssetName();
 
-	public void OnAfterDeserialize()
-	{
-	}
+	public void OnAfterDeserialize() {}
 
-	public static ScriptableMonoObject[] monoScripts
-	{
-		get
-		{
-			TryUpdateMonoObjects();
-			return _monoScripts;
-		}
-	}
+	#region Database
 
-	private static bool TryUpdateMonoObjects()
-	{
-		//Update monoscripts listing if not previously updated or if we're in the editor
-		if (Application.isEditor || _monoScripts == null || _monoScripts.Length == 0)
-		{
-			_monoScripts = Resources.LoadAll<ScriptableMonoObject>("");
-			_monoScriptsByType = Resources.LoadAll<ScriptableMonoObject>("")
-				.SelectMany(m => m.GetType().GetBaseTypes().PrependWith(m.GetType())
-					.Select(t => new Tuple <Type, ScriptableMonoObject>(t, m)))
-				.Where(t => t != null)
-				.GroupBy(t => t.Item1, t => t.Item2)
-				.ToDictionary(g => g.Key, g => g.ToArray());
-			return true;
-		}
-
-		return false;
-	}
+	#endregion
 
 	public static void StartMonoScripts()
 	{
 		if (!Application.isPlaying) return;
 
-		foreach (ScriptableMonoObject monoScript in monoScripts)
+		foreach (ScriptableMonoObject monoScript in ScriptablesDatabase.Get<ScriptableMonoObject>())
 		{
 			monoScript.ScriptAwake();
 		}
@@ -90,9 +141,10 @@ public abstract class ScriptableMonoObject : ScriptableObject, ISerializationCal
 	{
 		//Select all types which inherit the generic class SingletonScriptableObject
 		IEnumerable<Type> singletonTypes = from t in Assembly.GetExecutingAssembly().GetTypes()
-			where t.IsClass && !t.IsAbstract && t.GetInheritanceHierarchy().Any(t =>
-				t.IsGenericType &&
-				t.GetGenericTypeDefinition() == typeof(SingletonScriptableObject<>))
+			where t.IsClass
+				&& !t.IsAbstract
+				&& t.GetInheritanceHierarchy().Any(t =>
+					t.IsGenericType && t.GetGenericTypeDefinition() == typeof(SingletonScriptableObject<>))
 			select t;
 
 		Debug.Log(string.Join(", ", singletonTypes.Select(t => t.ToString())));
@@ -100,7 +152,7 @@ public abstract class ScriptableMonoObject : ScriptableObject, ISerializationCal
 
 	public static void ResetMonoScripts()
 	{
-		foreach (ScriptableMonoObject monoScript in monoScripts)
+		foreach (ScriptableMonoObject monoScript in ScriptablesDatabase.Get(typeof(SingletonScriptableObject<>)))
 		{
 			monoScript.ScriptReset();
 		}
@@ -109,14 +161,4 @@ public abstract class ScriptableMonoObject : ScriptableObject, ISerializationCal
 
 	public virtual void ScriptAwake() {}
 	public virtual void ScriptReset() {}
-
-	public static IEnumerable<T> GetAllScriptables<T>()
-	{
-		TryUpdateMonoObjects();
-		return monoScripts.Length == 0 ? null : _monoScriptsByType[typeof(T)].Cast<T>();
-	}
-
-
-	public static T GetScriptableSingleton<T>() where T : ScriptableMonoObject =>
-		(T)monoScripts.FirstOrDefault(s => s.GetType() == typeof(T));
 }

@@ -1,57 +1,61 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
+using UnityEditor;
 using UnityEngine;
 
 
 [DefaultExecutionOrder(-999)]
 public class SettingsManager : SingletonScriptableObject<SettingsManager>
 {
-    [SerializeReference]
-    public List<SettingsBox> boxes = new();
-    public static Dictionary<Type, dynamic> boxDic;
+	private static Dictionary<Type, SettingsScriptable> boxDic;
 
+	public override void ScriptAwake()
+	{
+		PopulateDic();
+		foreach (Type newType in ScriptablesDatabase.Get<SettingsScriptable>()
+			         .Select(s => s.settings.GetType())
+			         .Except<Type>(boxDic.Keys))
+		{
+			SettingsScriptable scriptable = CreateNew<SettingsScriptable>(newType.Name.NormalizeCamel()) as SettingsScriptable;
+			scriptable.settings = Activator.CreateInstance(newType) as Settings;
+		}
+	}
 
-    private static void PopulateDicFromList()
-    {
-        OrganiseList();
-        boxDic = new Dictionary<Type, dynamic>();
-        foreach (SettingsBox settingsBox in _i.boxes)
-        {
-            boxDic.Add(settingsBox.GetType(), settingsBox);
-        }
+	private static void PopulateDic()
+	{
+		boxDic = new Dictionary<Type, SettingsScriptable>(ScriptablesDatabase.Get(typeof(SettingsScriptable))
+			.Select(t =>
+				new KeyValuePair<Type, SettingsScriptable>(((SettingsScriptable)t).settings.GetType(),
+					(SettingsScriptable)t)));
+	}
 
-        // Debug.Log($"Loaded {_i.boxes.Count} sets of settings");
-    }
+	// [MenuItem("Tools/Convert List to Scriptable Objects")]
+	// public static void ConvertListToScriptableObjects()
+	// {
+	// 	boxDic = ScriptablesDatabase.Get<SettingsScriptable>().ToDictionary(s => s.GetType(), s => s.settings);
+	// 	foreach (Settings box in _i.boxes)
+	// 	{
+	// 		if (boxDic.ContainsKey(box.GetType())) continue;
+	//
+	// 		SettingsScriptable scriptable = CreateNew<SettingsScriptable>(box.GetType().Name.NormalizeCamel());
+	// 	}
+	// }
 
-    public static T1 GetSetting<T1>() where T1 : SettingsBox, new()
-    {
-        if (boxDic == null) { PopulateDicFromList(); }
+	public static T1 GetSetting<T1>() where T1 : Settings, new()
+	{
+		if (boxDic is null || boxDic.Count == 0 || Application.isEditor && !Application.isPlaying)
+		{
+			PopulateDic();
+		}
 
-        boxDic.TryGetValue(typeof(T1), out dynamic existingBox);
+		if (boxDic.TryGetValue(typeof(T1), out SettingsScriptable existingBox)) return existingBox.settings as T1;
 
-        if (existingBox != null) { return existingBox as T1; }
+		Debug.LogError($"No settings of type {typeof(T1)} found");
 
-        existingBox = _i.boxes.FirstOrDefault(b => b.GetType() == typeof(T1));
-
-        if (existingBox != null)
-        {
-            boxDic[typeof(T1)] = existingBox;
-            return existingBox as T1;
-        }
-
-        SettingsBox box = new T1();
-        Debug.Log($"Made new {box.GetType().ToString().NormalizeCamel()}");
-        boxDic[typeof(T1)] = box;
-        _i.boxes.Add(box);
-
-        return box as T1;
-    }
-
-    private static void OrganiseList()
-    {
-        _i.boxes.RemoveAll(b => b == null);
-        _i.boxes.Sort((a, b) => a.name.CompareTo(b.name));
-    }
-
+		return null;
+	}
 }

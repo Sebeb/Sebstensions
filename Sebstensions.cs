@@ -5,6 +5,7 @@ using System;
 using System.Collections;
 using System.Globalization;
 using System.Runtime.Serialization;
+using JetBrains.Annotations;
 using Sirenix.OdinInspector;
 using Sirenix.Serialization;
 using Sirenix.Utilities;
@@ -833,12 +834,25 @@ public static class Seb
 
 	}
 
-	public static void TryRemove<T>(this List<T> list, T item)
+	public static bool AddIfNew<T>(this ICollection<T> collection, T value)
 	{
-		if (list.Contains(item))
+		if (!collection.Contains(value))
 		{
-			list.Remove(item);
+			collection.Add(value);
+			return true;
 		}
+		else return false;
+	}
+
+	public static bool RemoveAll<T>(this List<T> list, T item)
+	{
+		bool removed = false;
+		while (list.Remove(item))
+		{
+			removed = true;
+		}
+
+		return removed;
 	}
 
 	private static System.Random _rng = new();
@@ -1568,8 +1582,30 @@ public class SDictionary<TKey, TValue> : Dictionary<TKey, TValue>, ISerializatio
 	[SerializeField, HideInInspector]
 	private List<TKey> keyData = new();
 
-	[SerializeField, HideInInspector]
-	private List<TValue> valueData = new();
+	[SerializeField]
+	public List<TValue> valueData = new();
+
+	public SDictionary() {}
+
+	public SDictionary([NotNull] IDictionary<TKey, TValue> dictionary) : base(dictionary) {}
+
+	public SDictionary([NotNull] IDictionary<TKey, TValue> dictionary, IEqualityComparer<TKey> comparer) : base(
+		dictionary,
+		comparer) {}
+
+	public SDictionary(IEqualityComparer<TKey> comparer) : base(comparer) {}
+
+	public SDictionary(int capacity) : base(capacity) {}
+
+	public SDictionary(int capacity, IEqualityComparer<TKey> comparer) : base(capacity, comparer) {}
+
+	protected SDictionary(SerializationInfo info, StreamingContext context) : base(info, context) {}
+
+	public SDictionary(IEnumerable<KeyValuePair<TKey, TValue>> collection) : base(collection) {}
+
+	public SDictionary(IEnumerable<KeyValuePair<TKey, TValue>> collection, IEqualityComparer<TKey> comparer) : base(
+		collection,
+		comparer) {}
 
 	void ISerializationCallbackReceiver.OnAfterDeserialize()
 	{
@@ -1878,43 +1914,25 @@ public class RefillingPool<T>
 
 public class Bictionary<T1, T2> : Dictionary<T1, T2>
 {
-	public Bictionary()
-	{
-	}
+	public Bictionary() {}
 
-	public Bictionary(IDictionary<T1, T2> dictionary) : base(dictionary)
-	{
-	}
+	public Bictionary(IDictionary<T1, T2> dictionary) : base(dictionary) {}
 
 	public Bictionary(IDictionary<T1, T2> dictionary, IEqualityComparer<T1> comparer) :
-		base(dictionary, comparer)
-	{
-	}
+		base(dictionary, comparer) {}
 
-	public Bictionary(IEnumerable<KeyValuePair<T1, T2>> collection) : base(collection)
-	{
-	}
+	public Bictionary(IEnumerable<KeyValuePair<T1, T2>> collection) : base(collection) {}
 
 	public Bictionary(IEnumerable<KeyValuePair<T1, T2>> collection, IEqualityComparer<T1> comparer)
-		: base(collection, comparer)
-	{
-	}
+		: base(collection, comparer) {}
 
-	public Bictionary(IEqualityComparer<T1> comparer) : base(comparer)
-	{
-	}
+	public Bictionary(IEqualityComparer<T1> comparer) : base(comparer) {}
 
-	public Bictionary(int capacity) : base(capacity)
-	{
-	}
+	public Bictionary(int capacity) : base(capacity) {}
 
-	public Bictionary(int capacity, IEqualityComparer<T1> comparer) : base(capacity, comparer)
-	{
-	}
+	public Bictionary(int capacity, IEqualityComparer<T1> comparer) : base(capacity, comparer) {}
 
-	protected Bictionary(SerializationInfo info, StreamingContext context) : base(info, context)
-	{
-	}
+	protected Bictionary(SerializationInfo info, StreamingContext context) : base(info, context) {}
 
 	public T1 this[T2 index]
 	{
@@ -2047,10 +2065,7 @@ public static class TransformStructOverride
 	}
 }
 
-public static class MathS
-{
-
-}
+public static class MathS {}
 
 // https://www.habrador.com/tutorials/math/5-line-line-intersection/
 
@@ -2138,7 +2153,7 @@ public static class Reflection
 			.Select(type => Activator.CreateInstance(type) as T);
 	}
 
-	public static Dictionary<Type, IEnumerable<Type>> GetAllSingletonScriptChildrenTypes<T>() where T : class
+	public static IEnumerable<Type> GetAllSingletonScriptChildrenTypes<T>() where T : class
 	{
 		return AppDomain.CurrentDomain.GetAssemblies()
 			.SelectMany(assembly => assembly.GetTypes())
@@ -2148,10 +2163,10 @@ public static class Reflection
 				&& !t.IsAbstract)
 			.Select(t =>
 				new Tuple<Type, IEnumerable<Type>>(t,
-					t.GetBaseClasses().PrependWith(t)))
+					t.GetBaseClasses(true)))
 			.Where(p => p.Item2.Any(t => t.BaseType is { IsConstructedGenericType: true }
 				&& t.BaseType.GenericTypeArguments.Contains(t)))
-			.ToDictionary(p => p.Item1, p => p.Item2.TakeWhile(t => t != typeof(T)));
+			.Select(p => p.Item1);
 	}
 }
 

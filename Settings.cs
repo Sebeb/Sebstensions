@@ -3,17 +3,13 @@ using Sirenix.OdinInspector;
 using UnityEditor;
 using UnityEngine;
 
-[Serializable]
-public abstract class SettingsBox
+[Serializable, InlineProperty, HideLabel]
+public class Settings
 {
     [HideInInspector]
     public string name;
-#if UNITY_EDITOR
-    [ReadOnly]
-    public MonoScript parentScript;
-#endif
 
-    public SettingsBox()
+    public Settings()
     {
         name = GetType().ToString().NormalizeCamel();
     }

@@ -8,13 +8,16 @@ using UnityEditor;
 using UnityEngine;
 
 
+public interface ICacheable {}
+public interface ICacheable<T> {}
+
 /// <summary>
 /// Abstract class for making reload-proof singletons out of ScriptableObjects
 /// Returns the asset created on the editor, or null if there is none
 /// Based on https://www.youtube.com/watch?v=VBA1QCoEAX4
 /// </summary>
 /// <typeparam name="T">Singleton type</typeparam>
-public abstract class SingletonScriptableObject<T> : ScriptableMonoObject
+public abstract class SingletonScriptableObject<T> : ScriptableMonoObject, ICacheable
 	where T : ScriptableMonoObject
 {
 	static T _instance = null;
@@ -78,29 +81,15 @@ public abstract class SingletonScriptableObject<T> : ScriptableMonoObject
 public class ScriptableSingletonHelper : MonoBehaviour
 {
 #if UNITY_EDITOR
-	private static readonly string[] systemFileWords = { "Settings", "Manager", "Singleton", "Scriptable", "Object" };
 
-	public static string ClassTypesToDirectory(IEnumerable<Type> baseTypes)
-	{
-		var path = string.Join("/",
-			baseTypes.Reverse()
-				.Select(t => t.GetNiceName()
-					.Split('<')[0]
-					.NormalizeCamel()
-					.Split(' '))
-				.Select(ws => string.Join(' ', (systemFileWords.Contains(ws.Last()) ? ws.SkipLast(1) : ws))));
-		path += 's';
-		return path;
-	}
-
-	[UnityEditor.Callbacks.DidReloadScripts, MenuItem("Tools/Refresh Singletons")]
+	[UnityEditor.Callbacks.DidReloadScripts, MenuItem("Tools/Scriptable Objects/Refresh Singletons")]
 	public static void DebugSingletons()
 	{
 		bool assetsMade = false;
-		Dictionary<Type, IEnumerable<Type>> singletons =
+		IEnumerable<Type> singletons =
 			Reflection.GetAllSingletonScriptChildrenTypes<ScriptableMonoObject>();
 
-		foreach ((Type monoObjectType, IEnumerable<Type> parentTypes) in singletons)
+		foreach (Type monoObjectType in singletons)
 		{
 			string[] guids = AssetDatabase.FindAssets("t:" + monoObjectType);
 			string name = monoObjectType.ToString().NormalizeCamel();
@@ -111,20 +100,7 @@ public class ScriptableSingletonHelper : MonoBehaviour
 			}
 			else if (guids.Length == 0)
 			{
-				// Debug.Log($"No instance of type {name} found");
-
-				ScriptableObject newSingleton =
-					ScriptableObject.CreateInstance(monoObjectType);
-
-				string typesPath = parentTypes.Count() <= 2 ? ""
-					: ClassTypesToDirectory(parentTypes.Skip(1).SkipLast(1)) + '/';
-				string path = $"Assets/Resources/{typesPath}";
-				string assetPath = path + name + ".asset";
-				path.EnsureFolderExists();
-
-				AssetDatabase.CreateAsset(newSingleton, assetPath);
-				assetsMade = true;
-				Debug.Log("Created new settings at " + assetPath);
+				ScriptableMonoObject.CreateNew(monoObjectType);
 			}
 		}
 
