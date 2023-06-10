@@ -53,7 +53,6 @@ public class DisplayTimeAttributeDrawer : OdinAttributeDrawer<DisplayTimeAttribu
 
 	protected override void DrawPropertyLayout(GUIContent label)
 	{
-
 		float time = ValueEntry.SmartValue;
 		Rect rect = EditorGUILayout.GetControlRect();
 		GUIStyle style = new GUIStyle(GUI.skin.textField);

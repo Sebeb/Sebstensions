@@ -13,7 +13,7 @@ using Humanizer;
 
 public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerializationCallbackReceiver
 {
-	[ReadOnly]
+	[HideInInspector]
 	public new string name;
 	private static readonly string[] systemFileWords = { "Scriptable Object", "Scriptable", "Manager" };
 
@@ -47,7 +47,7 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 
 	public static T CreateNew<T>(string name = null) where T : ScriptableMonoObject => CreateNew(typeof(T), name) as T;
 
-	[MenuItem("Tools/Scriptable Objects/Reset Locations")]
+	[MenuItem("Tools/Scriptable Objects/Reset Locations", priority = -99998)]
 	public static void MoveAllToDefaultLocation()
 	{
 		IEnumerable<(string, string)> oldNewPath = ScriptablesDatabase.Get(typeof(ScriptableMonoObject))

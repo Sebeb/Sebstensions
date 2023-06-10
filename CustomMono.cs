@@ -7,9 +7,22 @@ using UnityEditor;
 
 public abstract class CustomMono : MonoBehaviour
 {
+#if UNITY_EDITOR
+	[FoldoutGroup("Settings"), ShowInInspector, LabelText("Settings"), ShowIf("settingsType"), InlineEditor(InlineEditorObjectFieldModes.CompletelyHidden), OnInspectorGUI("SetSettings")]
+	private SettingsScriptable serializedSettings;
+	private void SetSettings()
+	{
+		if (serializedSettings == null && settingsType != null)
+		{
+			serializedSettings = Settings.GetBox(settingsType, targetClassType: false);
+		}
+	}
+#endif
 	protected static bool quitting => ScriptHelper.quitting;
 	public static Action OnScreenSizeChange;
 
+	public virtual Type settingsType => null;
+	
 	/// <summary>
 	/// Called once per class on game and editor awake, this should be assigned a static method
 	/// </summary>

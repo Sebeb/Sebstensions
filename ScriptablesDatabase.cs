@@ -29,30 +29,31 @@ public class ScriptablesDatabase : SerializedScriptableObject
 				Debug.LogError("No SystemData asset found");
 			#endif
 			}
-
 			return __i;
 		}
 	}
 	public ScriptableMonoObject[][] scriptables2D;
 	[SerializeField]
 	private SDictionary<string, int> scriptablesIByType;
-	private Dictionary<Type, ScriptableMonoObject[]> typeScriptablesDic = new ();
+	private Dictionary<Type, ScriptableMonoObject[]> typeScriptablesDic = new();
 
-	
-	private static bool TryUpdateMonoObjects()
+
+	private static bool TryRefresh()
 	{
 		//Update monoscripts listing if not previously updated or if we're in the editor
-		if (Application.isEditor && !Application.isPlaying)
-		{
-			Refresh();
-			return true;
-		}
+		if (!Application.isEditor || Application.isPlaying) return false;
 
-		return false;
+		Refresh();
+		return true;
+
 	}
 
-	[MenuItem("Tools/Scriptable Objects/Refresh Database"), Button, InitializeOnLoadMethod, RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-	public static void Refresh()
+
+	[MenuItem("Tools/Scriptable Objects/Refresh Database")]
+	private static void Refresh() => Refresh(false);
+
+	[Button, InitializeOnLoadMethod, RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+	public static void Refresh(bool silent = true)
 	{
 		IEnumerable<Type> cachableType = AppDomain.CurrentDomain.GetAssemblies()
 			.SelectMany(assembly => assembly.GetTypes())
@@ -61,10 +62,7 @@ public class ScriptablesDatabase : SerializedScriptableObject
 
 		cachableType =
 			cachableType.Concat<Type>(Reflection.GetAllSingletonScriptChildrenTypes<ScriptableMonoObject>()).Distinct();
-
-		// Debug.Log(string.Join("\n",
-		// 	cachableType.Select(t => t.GetNiceFullName() + " : " + t.GetInheritanceDistance(typeof(ICacheable)))));
-
+		
 		_i.scriptablesIByType.Clear();
 		_i.typeScriptablesDic = cachableType
 			.Select(t => new KeyValuePair<Type, ScriptableMonoObject[]>(t,
@@ -72,15 +70,16 @@ public class ScriptablesDatabase : SerializedScriptableObject
 					.Select(g =>
 						AssetDatabase.LoadAssetAtPath<ScriptableMonoObject>(AssetDatabase.GUIDToAssetPath(g)))
 					.ToArray())).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-		
+
 		_i.scriptables2D = new ScriptableMonoObject[_i.typeScriptablesDic.Keys.Count()][];
-		
-		foreach (var row in _i.typeScriptablesDic.Select((k, i) => new {k, i}))
+
+		foreach (var row in _i.typeScriptablesDic.Select((k, i) => new { k, i }))
 		{
 			_i.scriptables2D[row.i] = row.k.Value;
 			_i.scriptablesIByType[row.k.Key.Name] = row.i;
 		}
-
+		
+		if (silent) return;
 
 		Debug.Log(string.Join("\n",
 			Enumerable.Select<KeyValuePair<Type, ScriptableMonoObject[]>, string>(_i.typeScriptablesDic,
@@ -94,15 +93,18 @@ public class ScriptablesDatabase : SerializedScriptableObject
 
 	public static IEnumerable<ScriptableMonoObject> Get(Type type)
 	{
+		TryRefresh();
 		if (_i.typeScriptablesDic.TryGetValue(type, out ScriptableMonoObject[] scriptables))
 		{
 			return scriptables;
 		}
+
 		if (_i.scriptablesIByType.TryGetValue(type.Name, out int index))
 		{
 			_i.typeScriptablesDic[type] = _i.scriptables2D[index];
 			return _i.scriptables2D[index];
 		}
+
 		Debug.LogError($"No scriptable objects of type {type} found");
 		return Enumerable.Empty<ScriptableMonoObject>();
 	}

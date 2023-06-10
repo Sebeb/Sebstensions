@@ -81,7 +81,7 @@ public class ScriptableSingletonHelper : MonoBehaviour
 {
 #if UNITY_EDITOR
 
-	[UnityEditor.Callbacks.DidReloadScripts, MenuItem("Tools/Scriptable Objects/Refresh Singletons")]
+	[UnityEditor.Callbacks.DidReloadScripts, MenuItem("Tools/Scriptable Objects/Refresh Singletons", priority = -99998)]
 	public static void DebugSingletons()
 	{
 		bool assetsMade = false;
