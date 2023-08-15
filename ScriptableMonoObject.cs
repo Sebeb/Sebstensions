@@ -120,7 +120,7 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 	#endif
 	}
 
-	public Coroutine StartCoroutine(IEnumerator coroutine) => ScriptHelper.DoCoroutine(coroutine);
+	public Coroutine StartCoroutine(IEnumerator coroutine) => ScriptHelper.StartCoroutine(coroutine);
 
 	public virtual void OnBeforeSerialize() => SetAssetName();
 
@@ -141,28 +141,46 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 	}
 
 	//TODO Init all singletons which implement SingletonScriptableObject<>
+	private static bool initedOnce;
 	public static void InitSingletons()
 	{
-		//Select all types which inherit the generic class SingletonScriptableObject
-		IEnumerable<Type> singletonTypes = from t in Assembly.GetExecutingAssembly().GetTypes()
-			where t.IsClass
-				&& !t.IsAbstract
-				&& t.GetInheritanceHierarchy().Any(t =>
-					t.IsGenericType && t.GetGenericTypeDefinition() == typeof(SingletonScriptableObject<>))
-			select t;
-
-		Debug.Log(string.Join(", ", singletonTypes.Select(t => t.ToString())));
-	}
-
-	public static void ResetMonoScripts()
-	{
-		foreach (ScriptableMonoObject monoScript in ScriptablesDatabase.Get(typeof(SingletonScriptableObject<>)))
+		foreach (ScriptableMonoObject monoScript in ScriptablesDatabase.Get<ScriptableMonoObject>())
 		{
-			monoScript.ScriptReset();
+			if (initedOnce && !monoScript.ReInitOnRestart()) { continue; }
+
+			monoScript.Initialize();
+		}
+		initedOnce = true;
+	}
+	
+	public static void UpdateMonoScripts()
+	{
+		if (!Application.isPlaying) { return; }
+		foreach (ScriptableMonoObject monoScript in ScriptablesDatabase.Get<ScriptableMonoObject>())
+		{
+			monoScript.Update();
 		}
 	}
 
+	public virtual bool ReInitOnRestart() => true;
 
-	public virtual void ScriptAwake() {}
-	public virtual void ScriptReset() {}
+	public static void ResetMonoScripts(bool isRestart)
+	{
+		foreach (ScriptableMonoObject monoScript in ScriptablesDatabase.Get(typeof(SingletonScriptableObject<>)))
+		{
+			if (isRestart && !monoScript.ReInitOnRestart()) { continue; }
+
+			monoScript.Deinitialize();
+		}
+	}
+
+	protected virtual void Initialize() {}
+	protected virtual void ScriptAwake() {}
+	protected virtual void Update(){}
+	protected virtual void Deinitialize() {}
+	
+	protected static Coroutine StartCoroutine(IEnumerator coro, bool allowInEditor = false) =>
+		ScriptHelper.StartCoroutine(coro, allowInEditor);
+	protected void StopCoroutine(Coroutine coro) => ScriptHelper.StopCoroutine(coro);
+
 }

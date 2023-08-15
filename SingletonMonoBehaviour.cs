@@ -1,46 +1,91 @@
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 
 public abstract class SingletonMonoBehaviour<T> : CustomMono where T : SingletonMonoBehaviour<T>
 {
-	protected override void Assign() => SetInstance();
-
-	private void SetInstance()
+	protected bool AssertSingleton(bool thisInstance)
 	{
-		if (instance != null)
+		List<SingletonMonoBehaviour<T>> instances =
+			new List<SingletonMonoBehaviour<T>>(FindObjectsOfType<T>()
+				.Select(o => o as SingletonMonoBehaviour<T>));
+		instances.Remove(this);
+
+		if (instances.Count == 0)
 		{
-			if (instance == this)
+			_instance = this as T;
+			return true;
+		}
+		else
+		{
+			if (thisInstance)
 			{
-				return;
+				_instance = this as T;
+				foreach (SingletonMonoBehaviour<T> instance in instances)
+				{
+					DestroyImmediate(instance.gameObject);
+				}
+				return true;
+			}
+			else
+			{
+				DestroyImmediate(gameObject);
+				return false;
+			}
+		}
+	}
+	protected static T GetInstance(bool quiet = false)
+	{
+		if (_instance) { return _instance; }
+
+		var instances = new List<T>(FindObjectsOfType<T>());
+		if (instances.Count == 0)
+		{
+			if (ScriptHelper.quitting)
+			{
+				if (!quiet) Debug.LogError($"{typeof(T)} singleton is no longer accessible since the application is quitting");
+				return null;
+			}
+			if (!Application.isPlaying)
+			{
+				if (!quiet) Debug.LogError($"{typeof(T)} singleton only exists in playtime");
+				return null;
+			}
+			_instance = MonoTools.MakeSingleton<T>();
+		}
+		else
+		{
+			if (instances.Count > 1)
+			{
+				Debug.LogError($"Multiple {typeof(T)} detected. ");
 			}
 
-			Debug.LogError($"Multiple instances of {GetType()} found here...", this);
-			Debug.LogError($"...and here", instance);
-			return;
+			_instance = instances[0];
 		}
-		// Debug.Log($"Set instance {GetType()}", this);
-
-		instance = this as T;
+		return _instance;
 	}
 
-	private static T FindInstance()
+	public static T _i => _instance ??= GetInstance();
+	private static T _instance;
+}
+
+public static class MonoTools
+{
+	public static Transform singletonsParent;
+
+	public static T MakeSingleton<T>() where T : Component
 	{
-		if (instance != null)
+		if (singletonsParent == null)
 		{
-			return instance;
+			singletonsParent = ((Transform)null).GetOrMakeChild("Singletons");
+			// Debug.Log("Made new singletons parent!");
+			Object.DontDestroyOnLoad(singletonsParent.gameObject);
+			singletonsParent.transform.SetSiblingIndex(0);
 		}
+		T newInstance = new GameObject(typeof(T).ToString()).AddComponent<T>();
+		newInstance.transform.SetParent(singletonsParent.transform);
 
-		instance = FindObjectOfType<T>(includeInactive: true);
-		if (instance == null)
-		{
-			Debug.LogError($"No instance of {typeof(T)} found");
-		}
-
-		// else { Debug.Log($"Set instance {typeof(T)}", instance); }
-		return instance;
+		return newInstance;
 	}
-
-	// ReSharper disable once InconsistentNaming
-	private static T instance;
-	public static T _i => instance ? instance : FindInstance();
 }

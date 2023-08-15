@@ -370,7 +370,10 @@ public static class Seb
 		return bounds;
 	}
 
-	#endregion
+	public static void SetHeight(this RectTransform rectT, float height) =>
+		rectT.sizeDelta = rectT.sizeDelta.SetY(height);
+
+#endregion
 
 	#region MeshRenderer
 
@@ -1926,7 +1929,7 @@ public static class Seb
 
 	public static void WaitForFrames(int frames, Action action)
 	{
-		ScriptHelper.DoCoroutine(WaitForFramesCoroutine(frames, action));
+		ScriptHelper.StartCoroutine(WaitForFramesCoroutine(frames, action));
 
 		IEnumerator WaitForFramesCoroutine(int frames, Action action)
 		{
@@ -2090,7 +2093,7 @@ public class Timer
 		if (!autoUpdate) return;
 
 		state = State.Running;
-		ScriptHelper.DoCoroutine(CoroAutoUpdate());
+		ScriptHelper.StartCoroutine(CoroAutoUpdate());
 	}
 
 	private IEnumerator CoroAutoUpdate()
@@ -2672,7 +2675,7 @@ public class Map<TKey, TValue> : SDictionary<TKey, TValue>
 }
 
 [Serializable]
-public struct Transformation
+public struct Translation
 {
 	public Vector3 position;
 	public Quaternion rotation;
@@ -2683,50 +2686,52 @@ public struct Transformation
 	}
 	public Vector3 scale;
 
-	public Transformation(Transform transform, Space space = Space.Self)
+	public Translation(Transform transform, Space space = Space.Self)
 	{
 		position = space == Space.World ? transform.position : transform.localPosition;
 		rotation = space == Space.World ? transform.rotation : transform.localRotation;
 		scale = space == Space.World ? transform.lossyScale : transform.localScale;
 	}
 
-	public Transformation(Vector3 position, Quaternion rotation, Vector3 scale)
+	public Translation(Vector3 position, Quaternion rotation, Vector3 scale)
 	{
 		this.position = position;
 		this.rotation = rotation;
 		this.scale = scale;
 	}
 
-	public Transformation(Vector3 position, Quaternion rotation)
+	public Translation(Vector3 position, Quaternion rotation)
 	{
 		this.position = position;
 		this.rotation = rotation;
 		scale = Vector3.one;
 	}
 
-	public Transformation(Vector3 position)
+	public Translation(Vector3 position)
 	{
 		this.position = position;
 		rotation = Quaternion.identity;
 		scale = Vector3.one;
 	}
 
-	public Transformation(Quaternion rotation)
+	public Translation(Quaternion rotation)
 	{
 		position = Vector3.zero;
 		this.rotation = rotation;
 		scale = Vector3.one;
 	}
 
-	public static Transformation operator +(Transformation a, Transformation b) =>
+	public static Translation operator +(Translation a, Translation b) =>
 		new(a.position + b.position,
 			a.rotation * b.rotation,
 			a.scale.Multiply(b.scale));
+	
+	public static implicit operator Translation(Transform t) => new(t);
 }
 
 public static class TransformStructOverride
 {
-	public static void Set(this Transform t, Transformation @struct, Space space = Space.Self)
+	public static void Set(this Transform t, Translation @struct, Space space = Space.Self)
 	{
 		if (space == Space.Self)
 		{
@@ -2742,7 +2747,7 @@ public static class TransformStructOverride
 		}
 	}
 
-	public static void Apply(this Transform t, Transformation @struct, Space space = Space.Self)
+	public static void Apply(this Transform t, Translation @struct, Space space = Space.Self)
 	{
 		if (space == Space.Self)
 		{
