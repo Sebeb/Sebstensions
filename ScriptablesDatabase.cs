@@ -4,6 +4,7 @@ using System.Linq;
 using Sirenix.OdinInspector;
 using Sirenix.Utilities;
 using UnityEditor;
+using UnityEditor.Callbacks;
 using UnityEngine;
 
 
@@ -14,12 +15,12 @@ public class ScriptablesDatabase : SerializedScriptableObject
 	{
 		get
 		{
-			if (__i is null)
+			if (__i == null)
 			{
 				__i = Resources.Load<ScriptablesDatabase>("SystemData");
 			}
 
-			if (__i is null)
+			if (__i == null)
 			{
 			#if UNITY_EDITOR
 				__i = CreateInstance<ScriptablesDatabase>();
@@ -29,19 +30,25 @@ public class ScriptablesDatabase : SerializedScriptableObject
 				Debug.LogError("No SystemData asset found");
 			#endif
 			}
+
 			return __i;
 		}
 	}
+
+	[DidReloadScripts, InitializeOnLoadMethod,
+	 RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+	private static void SetSingleton() => __i ??= _i;
+
 	public ScriptableMonoObject[][] scriptables2D;
 	[SerializeField]
 	private SDictionary<string, int> scriptablesIByType;
 	private Dictionary<Type, ScriptableMonoObject[]> typeScriptablesDic = new();
 
 
-	private static bool TryRefresh()
+	public static bool TryRefresh()
 	{
 		//Update monoscripts listing if not previously updated or if we're in the editor
-		if (!Application.isEditor || Application.isPlaying) return false;
+		if (!Application.isEditor && _i.typeScriptablesDic != null && _i.typeScriptablesDic.Any()) return false;
 
 		Refresh();
 		return true;
@@ -50,9 +57,14 @@ public class ScriptablesDatabase : SerializedScriptableObject
 
 
 	[MenuItem("Tools/Scriptable Objects/Refresh Database")]
-	private static void Refresh() => Refresh(false);
+	private static void _Refresh() => Refresh(false);
 
-	[Button, InitializeOnLoadMethod, RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+	[Button]
+	public static void ManualRefresh() => Refresh(true);
+
+	[ExecuteOnReload, RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+	public static void Refresh() => Refresh(true);
+
 	public static void Refresh(bool silent = true)
 	{
 		IEnumerable<Type> cachableType = AppDomain.CurrentDomain.GetAssemblies()
@@ -62,7 +74,7 @@ public class ScriptablesDatabase : SerializedScriptableObject
 
 		cachableType =
 			cachableType.Concat<Type>(Reflection.GetAllSingletonScriptChildrenTypes<ScriptableMonoObject>()).Distinct();
-		
+
 		_i.scriptablesIByType.Clear();
 		_i.typeScriptablesDic = cachableType
 			.Select(t => new KeyValuePair<Type, ScriptableMonoObject[]>(t,
@@ -78,11 +90,11 @@ public class ScriptablesDatabase : SerializedScriptableObject
 			_i.scriptables2D[row.i] = row.k.Value;
 			_i.scriptablesIByType[row.k.Key.Name] = row.i;
 		}
-		
+
 		if (silent) return;
 
 		Debug.Log(string.Join("\n",
-			Enumerable.Select<KeyValuePair<Type, ScriptableMonoObject[]>, string>(_i.typeScriptablesDic,
+			Enumerable.Select(_i.typeScriptablesDic,
 				kvp =>
 					$"({kvp.Value.Length}) {kvp.Key}:  {string.Join(", ", Enumerable.Select<ScriptableMonoObject, string>(kvp.Value, s => s.name))}")));
 	}
@@ -105,7 +117,7 @@ public class ScriptablesDatabase : SerializedScriptableObject
 			return _i.scriptables2D[index];
 		}
 
-		Debug.LogError($"No scriptable objects of type {type} found");
+		// Debug.LogError($"No scriptable objects of type {type} found");
 		return Enumerable.Empty<ScriptableMonoObject>();
 	}
 }

@@ -1,13 +1,17 @@
-﻿using System;
-using System.Linq;
-using Sirenix.OdinInspector.Editor;
+﻿using Sirenix.OdinInspector.Editor;
+using Sirenix.Utilities.Editor;
 using UnityEditor;
 
 
 public class GameSettingsManager : OdinMenuEditorWindow
 {
 	[MenuItem("Tools/Game Settings", priority = -999999)]
-	private static void OpenEditor() => GetWindow<GameSettingsManager>("Game Settings");
+	private static void OpenEditor()
+	{
+		GameSettingsManager window = GetWindow<GameSettingsManager>("Game Settings");
+		window.titleContent = new UnityEngine.GUIContent("Game Settings", EditorIcons.SettingsCog.Active);
+
+	}
 
 	protected override OdinMenuTree BuildMenuTree()
 	{

@@ -1,5 +1,7 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using Sirenix.OdinInspector;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -8,7 +10,7 @@ using UnityEngine.InputSystem;
 [DefaultExecutionOrder(-200)]
 public class DebugHUD : SingletonMonoBehaviour<DebugHUD>
 {
-	public Vector2 centerStayFadeTime;
+	public float fadeTime = 0.5f;
 
 	[Header("References")]
 	public TextMeshProUGUI cornerTmp;
@@ -16,26 +18,38 @@ public class DebugHUD : SingletonMonoBehaviour<DebugHUD>
 	public CanvasGroup centerCanvasGroup;
 
 	private Dictionary<int, Coroutine> cornerRemoveCoros = new();
-	private Coroutine centerFadeCoro;
 
+	[ClearOnReload(true)]
 	private static SortedDictionary<int, string> debugTexts = new();
+	[ClearOnReload(true)]
+	private static List<string> centerTexts = new();
 
 	private void Start()
 	{
 		_i.cornerTmp.enabled = PlayerPrefs.GetInt("showDebugCorner", 1) == 1;
 	}
 
+	[Button]
+	private void TestCenter()
+	{
+		AddCenterText("Test " + centerTexts.Count);
+	}
+
 	public static void AddCornerText(int key, string text, float removeTime = -1,
 		bool allowInEditor = false)
 	{
 		if (!Application.isPlaying && !allowInEditor
-		    || _i == null || _i.cornerTmp == null)
+		    || _i == null
+		    || _i.cornerTmp == null)
 		{
 			Debug.Log(text);
 			return;
 		}
 
-		if (debugTexts.ContainsKey(key) && debugTexts[key] == text) { return; }
+		if (debugTexts.ContainsKey(key) && debugTexts[key] == text)
+		{
+			return;
+		}
 
 		debugTexts[key] = text;
 		RedrawText();
@@ -46,15 +60,13 @@ public class DebugHUD : SingletonMonoBehaviour<DebugHUD>
 		}
 	}
 
-	public static void AddCenterText(string text)
-	{
-		_i.centerTmp.text = text;
-		_i.CenterFade();
-	}
 
 	private void CornerTimedRemove(int key, float time)
 	{
-		if (cornerRemoveCoros.ContainsKey(key)) { StopCoroutine(cornerRemoveCoros[key]); }
+		if (cornerRemoveCoros.ContainsKey(key))
+		{
+			StopCoroutine(cornerRemoveCoros[key]);
+		}
 
 		cornerRemoveCoros[key] = StartCoroutine(Coro(key, time));
 
@@ -67,30 +79,55 @@ public class DebugHUD : SingletonMonoBehaviour<DebugHUD>
 		}
 	}
 
-	private void CenterFade()
+	public static void AddCenterText(string text, float time = 1.5f)
 	{
+		centerTexts.Remove(text);
+		centerTexts.Add(text);
+		UpdateCenterText();
+		_i.CenterFade(text, time);
+	}
+
+	private Action newCenterText;
+
+	private static void UpdateCenterText()
+	{
+		_i.centerTmp.text = centerTexts.Join("\n");
+		Canvas.ForceUpdateCanvases();
+	}
+	private void CenterFade(string text, float stayTime, bool mirrorInCosole = true)
+	{
+		if (mirrorInCosole) Debug.Log(text);
+
+		newCenterText?.Invoke();
 		centerCanvasGroup.gameObject.SetActive(true);
 		centerCanvasGroup.alpha = 1;
-		if (centerFadeCoro != null) { StopCoroutine(centerFadeCoro); }
-		centerFadeCoro = StartCoroutine(Coro());
+		StartCoroutine(Coro());
 
 		IEnumerator Coro()
 		{
-			yield return new WaitForSeconds(centerStayFadeTime.x);
+			bool fadeOut = true;
+			newCenterText += () => fadeOut = false;
+			yield return new WaitForSeconds(stayTime);
 
-			while (centerCanvasGroup.alpha > 0)
+			while (centerCanvasGroup.alpha > 0 && fadeOut)
 			{
-				centerCanvasGroup.alpha -= Time.deltaTime / centerStayFadeTime.y;
+				centerCanvasGroup.alpha -= Time.deltaTime / fadeTime;
+				yield return null;
 			}
 
-			centerCanvasGroup.gameObject.SetActive(false);
-			centerFadeCoro = null;
+			centerTexts.Remove(text);
+			
+			if (fadeOut) centerCanvasGroup.gameObject.SetActive(false);
+			else UpdateCenterText();
 		}
 	}
 
 	public static void RemoveDebugText(int key)
 	{
-		if (!debugTexts.ContainsKey(key)) { return; }
+		if (!debugTexts.ContainsKey(key))
+		{
+			return;
+		}
 
 		debugTexts.Remove(key);
 		RedrawText();

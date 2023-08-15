@@ -4,27 +4,101 @@ using System.Linq;
 using System;
 using System.Collections;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
+using System.Text.RegularExpressions;
 using JetBrains.Annotations;
 using Sirenix.OdinInspector;
-using Sirenix.Serialization;
 using Sirenix.Utilities;
 using UnityEngine.UI;
 using UnityEngine;
-using UnityEngine.Events;
 using Object = UnityEngine.Object;
+using Quaternion = UnityEngine.Quaternion;
 using Random = UnityEngine.Random;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 
 
+// public class Lazy<T>
+// {
+// 	private T obj;
+// 	private Func<T> func;
+// 	public Lazy(Func<T> aFunc)
+// 	{
+// 		func = aFunc;
+// 	}
+// 	
+// 	public T value
+// 	{
+// 		get
+// 		{
+// 			if (obj == null)
+// 			{
+// 				obj = func();
+// 			}
+//
+// 			return obj;
+// 		}
+// 	}
+// 	
+// 	public static explicit operator T(Lazy<T> aLazy) => aLazy.value;
+// }
+
+
 public static class Seb
 {
 	public static Vector2 screenSize => new(Screen.width, Screen.height);
 
-	#region Vectors
+	private static Dictionary<string, Vector2> keyTimeFrame = new();
+	public static void StartTimer(string key)
+	{
+	#if UNITY_EDITOR
+		keyTimeFrame[key] = new Vector2(Time.realtimeSinceStartup, Time.frameCount);
+	#endif
+	}
+	public static void StopTimer(string key, string debugLabel = "")
+	{
+	#if UNITY_EDITOR
+		if (!keyTimeFrame.TryGetValue(key, out Vector2 timeFrame))
+		{
+			Debug.LogError($"No timer \'{key}\' started");
+			return;
+		}
+		float time = Time.realtimeSinceStartup - timeFrame.x;
+		int frames = (int)(Time.frameCount - timeFrame.y);
 
+		Debug.Log(
+			$"{(debugLabel.IsNullOrEmpty() ? key : debugLabel)}: {time.Round(3)}s - {(frames / time).Round((2))}FPS - {frames} frames");
+	#endif
+	}
+
+#region Vectors
+
+	//https://stackoverflow.com/questions/44362083/transform-a-string-to-vector3
+	public static Vector3 ToVector3(this string input)
+	{
+		if (input != null)
+		{
+			input = input.Replace('(', '\0');
+			input = input.Replace(')', '\0');
+			var vals = input.Split(',').Select(s => s.Trim()).ToArray();
+			if (vals.Length == 3)
+			{
+				float v1, v2, v3;
+				if (float.TryParse(vals[0], out v1) &&
+				    float.TryParse(vals[1], out v2) &&
+				    float.TryParse(vals[2], out v3))
+					return new Vector3(v1, v2, v3);
+				else
+					throw new ArgumentException();
+			}
+			else
+				throw new ArgumentException();
+		}
+		else
+			throw new ArgumentException();
+	}
 	public static Vector2 XZ(this Vector3 input)
 	{
 		return new Vector2(input.x, input.z);
@@ -56,9 +130,7 @@ public static class Seb
 		var a = aDegree * Mathf.Deg2Rad;
 		return new Vector2(Mathf.Cos(a), Mathf.Sin(a));
 	}
-
-	public static Vector2 Rotate(this Vector2 aVec, float aDegree) =>
-		ComplexMult(aVec, Rotation(aDegree));
+	public static Vector2 Rotate(this Vector2 aVec, float aDegree) => ComplexMult(aVec, Rotation(aDegree));
 
 	public static Vector2 SetX(this Vector2 input, float value) => new(value, input.y);
 	public static Vector2 SetY(this Vector2 input, float value) => new(input.x, value);
@@ -102,7 +174,12 @@ public static class Seb
 
 	public static Vector3 CapMin(this Vector3 input, float value) =>
 		new(input.x.CapMin(value), input.y.CapMin(value), input.z.CapMin(value));
-
+	public static Vector3 Clamp(this Vector3 input, Vector3 min, Vector3 max)
+	{
+		return new Vector3(Mathf.Clamp(input.x, min.x, max.x),
+			Mathf.Clamp(input.y, min.y, max.y),
+			Mathf.Clamp(input.z, min.z, max.z));
+	}
 	public static Vector3 Multiply(this Vector3 input, Vector3 value) =>
 		new(input.x * value.x, input.y * value.y, input.z * value.z);
 
@@ -198,6 +275,8 @@ public static class Seb
 	public static Vector3 WrapAngle(this Vector3 angle) =>
 		new(WrapAngle(angle.x), WrapAngle(angle.y), WrapAngle(angle.z));
 
+	public static Vector3 UnwrapAngle(this Vector3 angle) =>
+		new(UnwrapAngle(angle.x), UnwrapAngle(angle.y), UnwrapAngle(angle.z));
 	/// <summary>Converts an euler rotation to be between 180 and -180, as it appears in the inspector </summary>
 	public static float WrapAngle(this float angle)
 	{
@@ -376,11 +455,7 @@ public static class Seb
 
 	public static Transform GetSceneLevelParent(this Transform t)
 	{
-		while (t.parent != null)
-		{
-			t = t.parent;
-		}
-
+		while (t.parent != null) { t = t.parent; }
 		return t;
 	}
 
@@ -391,10 +466,7 @@ public static class Seb
 		{
 			parent = parent.transform.parent;
 
-			if (parent == null)
-			{
-				break;
-			}
+			if (parent == null) { break; }
 		}
 
 		return parent;
@@ -422,25 +494,42 @@ public static class Seb
 		return list;
 	}
 
-	public static void DestroyChildren(this Transform trans)
+	public static void DestroyChildren(this Transform trans, bool silent = false)
 	{
 		int childs = trans.childCount;
 		for (int i = childs - 1; i >= 0; i--)
 		{
-			trans.GetChild(i).gameObject.Destroy();
+			trans.GetChild(i).gameObject.Destroy(silent: silent);
 		}
 	}
 
-	public static void Destroy(this Object _go)
+	public static void Destroy(this Object _go, bool immediate = false, bool silent = false)
 	{
 		if (Application.isPlaying)
 		{
-			Object.Destroy(_go);
+			if (immediate) { Object.DestroyImmediate(_go); }
+			else { Object.Destroy(_go); }
 		}
-		else
+	#if UNITY_EDITOR
+		else if (PrefabUtility.IsPartOfAnyPrefab(_go))
 		{
-			Object.DestroyImmediate(_go);
+			if (!silent)
+			{
+				Debug.Log(
+					$"Could not destroy \"{_go.name}\" as it is in a prefab. Disabling instead");
+			}
+			switch (_go)
+			{
+				case GameObject gameObject:
+					gameObject.SetActive(false);
+					break;
+				case MonoBehaviour script:
+					script.gameObject.SetActive(false);
+					break;
+			}
 		}
+	#endif
+		else { Object.DestroyImmediate(_go); }
 	}
 
 	public static Quaternion InverseTransformRotation(this Transform trans,
@@ -453,6 +542,37 @@ public static class Seb
 			? parent.GetComponentsInChildren<Transform>(includeInactive: true)
 			: parent.GetChildren())
 		.Where(t => t.gameObject.CompareTag(tag));
+	//https://www.loekvandenouweland.com/content/finding-gameobjects-and-transforms-recursively-linq-style.html
+	public static Transform FirstChildOrDefault(this Transform parent, Func<Transform, bool> query,
+		bool includeDisabled = true)
+	{
+		if (parent.childCount == 0)
+		{
+			return null;
+		}
+
+		Transform result = null;
+		for (int i = 0; i < parent.childCount; i++)
+		{
+			var child = parent.GetChild(i);
+			if (!includeDisabled && !child.gameObject.activeInHierarchy) { continue; }
+			if (query(child))
+			{
+				return child;
+			}
+			result = FirstChildOrDefault(child, query);
+		}
+
+		return result;
+	}
+	///Searches each child recursively for a transform which fulfills the query. Returns max one result per parent child count
+	public static IEnumerable<Transform> FirstChildrenWhere(this Transform parent,
+		Func<Transform, bool> query,
+		bool includeDisabled = true, bool includeParent = false) => includeParent && query(parent)
+		? new[] { parent } :
+		parent.GetChildren().Select(c =>
+			query(c) && (includeDisabled || c.gameObject.activeInHierarchy) ? c
+				: c.FirstChildOrDefault(query, includeDisabled)).WhereNotNull();
 
 	#endregion
 
@@ -475,19 +595,13 @@ public static class Seb
 		while (true)
 		{
 			int removeAt = input.IndexOfAny(Path.GetInvalidFileNameChars());
-			if (removeAt == -1)
-			{
-				break;
-			}
-			else
-			{
-				input = input.Remove(removeAt, 1);
-			}
+			if (removeAt == -1) { break; }
+			else { input = input.Remove(removeAt, 1); }
 		}
 
 		input = input.TryRemove(maxLength, true);
 
-		return input;
+		return input + extension;
 	}
 
 	public static bool Contains(this string[] source, string toCheck, StringComparison comp) =>
@@ -590,7 +704,8 @@ public static class Seb
 		return takeCount == s.Length ? -1 : takeCount;
 	}
 
-	public static List<int> AllIndexesOf(this string str, string value)
+	public static List<int> AllIndexesOf(this string str, string value,
+		StringComparison comparison = StringComparison.Ordinal)
 	{
 		if (String.IsNullOrEmpty(value))
 			throw new ArgumentException("the string to find may not be empty", "value");
@@ -598,32 +713,27 @@ public static class Seb
 		List<int> indexes = new List<int>();
 		for (int index = 0;; index += value.Length)
 		{
-			index = str.IndexOf(value, index);
-			if (index == -1)
-			{
-				return indexes;
-			}
-			else
-			{
-				indexes.Add(index);
-			}
+			index = str.IndexOf(value, index, comparison);
+			if (index == -1) { return indexes; }
+			else { indexes.Add(index); }
 		}
 	}
 
-	public static List<int> AllIndexesOf(this string str, char value)
+	public static IEnumerable<int> IndexOfAll(this string sourceString, char subchar) =>
+		IndexOfAll(sourceString, "" + subchar);
+	public static IEnumerable<int> IndexOfAll(this string sourceString, string subString)
+	{
+		return Regex.Matches(sourceString, subString).Cast<Match>().Select(m => m.Index);
+	}
+
+	public static List<int> AllIndexesOf(this string str, params char[] value)
 	{
 		List<int> indexes = new List<int>();
 		for (int index = 0;; index++)
 		{
-			index = str.IndexOf(value, index);
-			if (index == -1)
-			{
-				return indexes;
-			}
-			else
-			{
-				indexes.Add(index);
-			}
+			index = str.IndexOfAny(value, index);
+			if (index == -1) { return indexes; }
+			else { indexes.Add(index); }
 		}
 	}
 
@@ -634,23 +744,12 @@ public static class Seb
 		for (int i = 0; i < strings.Length; i++)
 		{
 			int newBreak = input.IndexOf(strings[i],
-				caseSensitive
-					? StringComparison.CurrentCulture
+				caseSensitive ? StringComparison.CurrentCulture
 					: StringComparison.CurrentCultureIgnoreCase);
-			if (newBreak == -1)
-			{
-				continue;
-			}
+			if (newBreak == -1) { continue; }
 
-			if (indexAfterString)
-			{
-				newBreak += strings[i].Length;
-			}
-
-			if (breakPoint < 0 || newBreak < breakPoint)
-			{
-				breakPoint = newBreak;
-			}
+			if (indexAfterString) { newBreak += strings[i].Length; }
+			if (breakPoint < 0 || newBreak < breakPoint) { breakPoint = newBreak; }
 		}
 
 		return breakPoint;
@@ -663,23 +762,12 @@ public static class Seb
 		for (int i = 0; i < strings.Length; i++)
 		{
 			int newBreak = input.LastIndexOf(strings[i],
-				caseSensitive
-					? StringComparison.CurrentCulture
+				caseSensitive ? StringComparison.CurrentCulture
 					: StringComparison.CurrentCultureIgnoreCase);
-			if (newBreak == -1)
-			{
-				continue;
-			}
+			if (newBreak == -1) { continue; }
 
-			if (indexAfterString)
-			{
-				newBreak += strings[i].Length;
-			}
-
-			if (breakPoint < 0 || newBreak > breakPoint)
-			{
-				breakPoint = newBreak;
-			}
+			if (indexAfterString) { newBreak += strings[i].Length; }
+			if (breakPoint < 0 || newBreak > breakPoint) { breakPoint = newBreak; }
 		}
 
 		return breakPoint;
@@ -760,6 +848,9 @@ public static class Seb
 	public static bool IsNullOrEmpty(this string input) => string.IsNullOrEmpty(input);
 	public static bool IsNullOrWhiteSpace(this string input) => string.IsNullOrWhiteSpace(input);
 
+	public static string Join(this IEnumerable<string> input, string separator = ", ") =>
+		string.Join(separator, input);
+
 	#endregion
 
 	#region Colour
@@ -773,19 +864,27 @@ public static class Seb
 	}
 
 	//https://www.extensionmethod.net/csharp/color/getcontrastingcolor
-	public static Color GetContrastingColor(this Color value)
+	public static Color GetContrastingBorW(this Color value)
 	{
 		var d = 0;
 
 		// Counting the perceptive luminance - human eye favors green color...
-		double a = 1 - (0.299 * value.r + 0.587 * value.g + 0.114 * value.b) / 255;
+		double a = 1 - (0.299 * value.r + 0.587 * value.g + 0.114 * value.b);
 
 		if (a < 0.5)
 			d = 0; // bright colors - black font
 		else
-			d = 255; // dark colors - white font
+			d = 1; // dark colors - white font
 
 		return new Color(d, d, d);
+	}
+
+	public static Color GetContrastingColor(this Color value)
+	{
+		var colorHsv = new Vector3();
+		Color.RGBToHSV(value, out colorHsv.x, out colorHsv.y, out colorHsv.z);
+
+		return Color.HSVToRGB((colorHsv.x + 0.5f) % 1, colorHsv.y, colorHsv.z);
 	}
 
 	//https://stackoverflow.com/questions/2395438/convert-system-drawing-color-to-rgb-and-hex-value
@@ -793,6 +892,10 @@ public static class Seb
 		"#" + c.r.ToString("X2") + c.g.ToString("X2") + c.b.ToString("X2");
 
 	public static Vector4 AsVec4(this Color c) => new(c.r, c.g, c.b, c.a);
+	public static Vector3 AsVec3(this Color c) => new(c.r, c.g, c.b);
+
+	public static Color AsColor(this Vector3 c) => new(c.x, c.y, c.z);
+
 
 	public static Color Randomize(this Color c) => new(Random.value, Random.value, Random.value, c.a);
 
@@ -802,6 +905,247 @@ public static class Seb
 
 	#region Collections
 
+	[Serializable]
+	public class ObservedList<T> : IList, IList<T>
+	{
+		public event Action<T> OnAdd, OnRemove;
+		public event Action<List<T>> OnChange;
+		[SerializeReference, SubclassSelector, InlineProperty, ListDrawerSettings(ListElementLabelName = "ToString")]
+		private List<T> _value = new();
+		private HashSet<IList<T>> subbedLists = new();
+		public int Count => _value.Count;
+		public bool IsSynchronized { get; }
+		public object SyncRoot { get; }
+
+		private static IList rootOList;
+
+		/// <summary>
+		/// Links a list to this one, so that any changes to this list are reflected in the other.
+		/// </summary>
+		/// <param name="catchUp">Adds items already in the list</param>
+		public void Link(IList<T> list, bool catchUp = false)
+		{
+			subbedLists.Add(list);
+			if (catchUp) list.AddRange(_value);
+		}
+
+		public void Unlink(IList<T> list) => subbedLists.Remove(list);
+
+		public bool AddIfNew(object item)
+		{
+			if (item is T t) return AddIfNew(t);
+			else throw new InvalidCastException();
+		}
+
+		/// <summary>
+		/// Adds an item to the list and any subbed lists.
+		/// </summary>
+		/// <returns>True if added to list OR any subbed lists</returns>
+		public bool AddIfNew(T item)
+		{
+			bool changed = _value.AddIfNew(item);
+			changed = OnChangeItem(item, add: true, ifNew: true) || changed;
+			return changed;
+		}
+
+		public int Add(object value)
+		{
+			if (value is T item)
+			{
+				Add(item);
+				return 0;
+			}
+			else throw new InvalidCastException();
+		}
+
+		public void Add(T item)
+		{
+			_value.Add(item);
+			OnChangeItem(item, add: true);
+		}
+
+		public void AddRange(IEnumerable<T> collection)
+		{
+			foreach (T item in collection)
+			{
+				Add(item);
+			}
+		}
+
+		private bool OnChangeItem(T item, bool add, bool ifNew = false)
+		{
+			rootOList ??= this;
+			bool changed = false;
+			OnAdd?.Invoke(item);
+			OnChange?.Invoke(_value);
+			foreach (IList<T> list in subbedLists)
+			{
+				if (add && (!ifNew || !list.Contains(item)))
+				{
+					if (ifNew && changed) changed = true;
+					list.Add(item);
+				}
+				else
+				{
+					if (list.Remove(item)) changed = true;
+				}
+			}
+
+			rootOList = null;
+			return changed;
+		}
+
+		void IList.Clear() => Clear();
+
+		void ICollection<T>.Clear() => Clear();
+
+		public void Clear()
+		{
+			foreach (T item in _value)
+			{
+				Remove(item);
+			}
+		}
+
+		public bool Contains(object value) => value is T item && _value.Contains(item);
+		public bool Contains(T item) => _value.Contains(item);
+		public void CopyTo(T[] array, int arrayIndex) { _value.CopyTo(array, arrayIndex); }
+
+		public int IndexOf(object value)
+		{
+			if (value is T item) return IndexOf(item);
+			else throw new InvalidCastException();
+		}
+
+		public int IndexOf(T item) => _value.IndexOf(item);
+
+		public void Insert(int index, object value)
+		{
+			if (value is T item) Insert(index, item);
+			else throw new InvalidCastException();
+		}
+
+		public void Insert(int index, T item)
+		{
+			_value.Insert(index, item);
+			OnChangeItem(item, add: true);
+		}
+
+		public void Remove(object value)
+		{
+			if (value is T item) Remove(item);
+			else throw new InvalidCastException();
+		}
+
+		/// <returns>True if item was removed from this or any linked lists</returns>
+		public bool Remove(T item)
+		{
+			bool result = _value.Remove(item);
+			result = OnChangeItem(item, add: false) || result;
+			return result;
+		}
+
+		void IList<T>.RemoveAt(int index) => RemoveAt(index);
+		void IList.RemoveAt(int index) => RemoveAt(index);
+
+		public void RemoveAt(int index)
+		{
+			if (index < 0 || index >= _value.Count)
+			{
+				throw new IndexOutOfRangeException();
+			}
+
+			rootOList ??= this;
+			T item = _value[index];
+			_value.RemoveAt(index);
+			OnChangeItem(item, add: false);
+			rootOList = null;
+		}
+
+		public bool IsFixedSize => false;
+		public bool IsReadOnly => false;
+		object IList.this[int index]
+		{
+			get => this[index];
+			set
+			{
+				if (value is T t)
+				{
+					this[index] = t;
+				}
+				else
+				{
+					Debug.LogError("Casting error");
+				}
+			}
+		}
+		public T this[int index]
+		{
+			get => _value[index];
+			set
+			{
+				_value[index] = value;
+				OnChange?.Invoke(_value);
+			}
+		}
+
+		public void CopyTo(Array array, int index)
+		{
+			if (array is T[] arrayT) _value.CopyTo(arrayT, index);
+		}
+
+		public IEnumerator<T> GetEnumerator() { return _value.GetEnumerator(); }
+		IEnumerator IEnumerable.GetEnumerator() { return GetEnumerator(); }
+		public List<T> GetRange(int iStart, int iEnd) => _value.GetRange(iStart, iEnd);
+	}
+	
+	//https://stackoverflow.com/questions/5248254/in-linq-select-all-values-of-property-x-where-x-null
+	public static IEnumerable<T> WhereNotNull<T>(this IEnumerable<T> sequence)
+	{
+		return sequence.Where(e => e != null);
+	}
+
+	public static IEnumerable<T> WhereNotNull<T>(this IEnumerable<T?> sequence)
+		where T : struct
+	{
+		return sequence.Where(e => e != null).Select(e => e.Value);
+	}
+	public static bool ExistsAndAny<T>(this IEnumerable<T> thing) => thing != null && thing.Any();
+	public static T RandomOrDefault<T>(this IEnumerable<T> list, Func<T, bool> predicate = null)
+	{
+		// If there are no elements in the collection, return the default value of T
+		list = predicate != null ? list.Where(predicate).ToList() : list.ToList();
+		return !list.ExistsAndAny()
+			? default
+			: list.ElementAt(Random.Range(0, list.Count()));
+
+	}
+
+	public static int Range(this IEnumerable<int> input) => input.Max() - input.Min();
+	public static float Range(this IEnumerable<float> input) => input.Max() - input.Min();
+
+	/// <returns>True if item was removed</returns>
+	public static bool TryRemove<T>(this List<T> list, T item)
+	{
+		if (list.Contains(item))
+		{
+			list.Remove(item);
+			return true;
+		}
+		else return false;
+	}
+
+	/// <returns>True if removal occured</returns>
+	public static bool TryRemove<TKey, TValue>(this Dictionary<TKey, TValue> dict, TKey key)
+	{
+		if (key != null && dict.ContainsKey(key))
+		{
+			dict.Remove(key);
+			return true;
+		}
+		else return false;
+	}
+	
 	private static System.Random _random = new();
 
 	public static T GetWeightedRandom<T>(this IEnumerable<T> itemsEnumerable,
@@ -834,6 +1178,7 @@ public static class Seb
 
 	}
 
+	/// <returns>True if added</returns>
 	public static bool AddIfNew<T>(this ICollection<T> collection, T value)
 	{
 		if (!collection.Contains(value))
@@ -842,6 +1187,19 @@ public static class Seb
 			return true;
 		}
 		else return false;
+	}
+
+
+	/// <returns>True if any nulls removed</returns>
+	public static bool ClearNulls<T>(this ICollection<T> collection)
+	{
+		List<T> nulls = collection.Where(x => x == null).ToList();
+		foreach (T item in nulls)
+		{
+			collection.Remove(item);
+		}
+
+		return nulls.Any();
 	}
 
 	public static bool RemoveAll<T>(this List<T> list, T item)
@@ -857,17 +1215,19 @@ public static class Seb
 
 	private static System.Random _rng = new();
 
-	public static void Shuffle<T>(this IList<T> list)
+	public static IList<T> Shuffle<T>(this IList<T> list, int seed = -1)
 	{
 		int n = list.Count;
+		if (seed != -1) { _rng = new System.Random(seed); }
 		while (n > 1)
 		{
 			n--;
-			int k = _rng.Next(n + 1);
+			int k = (_rng).Next(n + 1);
 			T value = list[k];
 			list[k] = list[n];
 			list[n] = value;
 		}
+		return list;
 	}
 
 	public static Dictionary<T1, T2> ToDictionary<T1, T2>(this IEnumerable<T1> keys,
@@ -875,6 +1235,122 @@ public static class Seb
 		keys.Zip(values, (key, value) => new { key, value })
 			.ToDictionary(val => val.key, val => val.value);
 
+	/// <summary>
+	/// Adds a value to a list in a dictionary, creating a new list set if necessary
+	/// </summary>
+	/// <returns>True if the dictionary already contained this key</returns>
+	public static bool AddToCollectionUnique<Tkey, Tvalue, TCollection>(this Dictionary<Tkey, TCollection> dic,
+		Tkey key, Tvalue value) where TCollection : ICollection<Tvalue>, new() =>
+		AddToCollection(dic, key, value, true);
+
+	/// <summary>
+	/// Adds a value to a list in a dictionary, creating a new list set if necessary
+	/// </summary>
+	/// <returns>True if the dictionary already contained this key</returns>
+	public static bool AddToCollection<Tkey, Tvalue, TCollection>(this IDictionary<Tkey, TCollection> dic,
+		Tkey key, Tvalue value, bool uniqueOnly = false)
+		where TCollection : ICollection<Tvalue>, new()
+	{
+		dic ??= new Dictionary<Tkey, TCollection>();
+		if (dic.ContainsKey(key))
+		{
+			if (uniqueOnly) { dic[key].AddIfNew(value); }
+			else { dic[key].Add(value); }
+			return true;
+		}
+		else
+		{
+			dic.Add(key, new TCollection());
+			dic[key].Add(value);
+			return false;
+		}
+	}
+
+	public static Dictionary<TKey, TCollection> ToCollectionDictionary<TElement, TKey, TValue,
+		TCollection>(this IEnumerable<TElement> source,
+		Func<TElement, TKey> keySelector,
+		Func<TElement, TValue> valueSelector) where TCollection : ICollection<TValue>, new()
+	{
+		Dictionary<TKey, TCollection> dic = new Dictionary<TKey, TCollection>();
+		foreach (TElement e in source)
+		{
+			TKey key = keySelector(e);
+			TValue value = valueSelector(e);
+			if (!dic.ContainsKey(key))
+			{
+				dic.Add(key, new TCollection());
+			}
+			dic[key].Add(value);
+		}
+		return dic;
+	}
+
+	/// <returns>True if added, false if already added</returns>
+	public static bool AddIfNew<T>(this ICollection<T> list, T value, IEqualityComparer<T> comparer = null)
+	{
+		if ((comparer != null && !list.Contains(value, comparer)) || !list.Contains(value))
+		{
+			list.Add(value);
+			return true;
+		}
+		else { return false; }
+	}
+
+	/// <returns>True if added, false if already added</returns>
+	public static bool AddIfNew(this ICollection<string> list, string value, StringComparison comparison)
+	{
+		if (!list.Any(v => v.Equals(value, comparison)))
+		{
+			list.Add(value);
+			return true;
+		}
+		else { return false; }
+	}
+
+	public static void AddRangeIfNew<T>(this ICollection<T> list, IEnumerable<T> values)
+	{
+		foreach (T value in values.Where(v => !list.Contains(v)))
+		{
+			list.Add(value);
+		}
+	}
+
+	/// <returns>True if added, false if already added</returns>
+	///<param name="forcePosition">If the list already contains this item at a different position, the item will be re-added at the correct position</param>
+	public static bool InsertIfNew<T>(this List<T> list, int i, T value, bool forcePosition = true)
+	{
+		i = i.CapMax(list.Count - 1).CapMin(0);
+		if (!list.Contains(value))
+		{
+			list.Insert(i, value);
+			return true;
+		}
+		else
+		{
+			if (forcePosition && list.IndexOf(value) != i)
+			{
+				list.Remove(value);
+				list.Insert(i, value);
+			}
+			return false;
+		}
+	}
+
+	public static void AddOrReplace<TKey, TValue>(this Dictionary<TKey, TValue> dict, TKey key,
+		TValue value)
+	{
+		if (dict.ContainsKey(key))
+			dict[key] = value;
+		else dict.Add(key, value);
+	}
+
+	public static TValue GetOrDefault<TKey, TValue>(this Dictionary<TKey, TValue> dic, TKey key) =>
+		dic.TryGetValue(key, out TValue valueOut) ? valueOut : default;
+
+	public static IEnumerable<(T item, int index)> WithIndex<T>(this IEnumerable<T> source) =>
+		source.Select((item, index) => (item, index));
+
+	
 	//https://stackoverflow.com/questions/12172162/how-to-insert-item-into-list-in-order
 	public static void SortedAdd<T>(this List<T> @this, T item) where T : IComparable<T>
 	{
@@ -905,29 +1381,120 @@ public static class Seb
 	public static int IndexOf<T>(this T[] array, T value)
 		=> Array.IndexOf(array, value);
 
+
+	public static bool Contains<T>(this IList<T> haystack, IList<T> needle, IEqualityComparer<T> cmp = null)
+	{
+		return haystack.IndexOf(needle, cmp) != -1;
+	}
+
+	public static int IndexOf<T>(this IList<T> haystack, IList<T> needle)
+	{
+		return IndexOf(haystack, needle, null);
+	}
+
+	public static int IndexOf<T>(this IList<T> haystack, IList<T> needle, IEqualityComparer<T> cmp)
+	{
+		if (haystack == null || needle == null)
+			throw new ArgumentNullException();
+
+		int needleCount = needle.Count;
+		if (needleCount == 0)
+			return 0; //empty lists are everywhere!
+
+		if (cmp == null)
+			cmp = EqualityComparer<T>.Default;
+		int count = haystack.Count;
+		if (needleCount == 1) //can't beat just spinning through for it
+		{
+			T item = needle[0];
+			for (int idx = 0; idx != count; ++idx)
+				if (cmp.Equals(haystack[idx], item))
+					return idx;
+
+			return -1;
+		}
+
+		int m = 0;
+		int i = 0;
+		int[] table = KMPTable(needle, cmp);
+		while (m + i < count)
+		{
+			if (cmp.Equals(needle[i], haystack[m + i]))
+			{
+				if (i == needleCount - 1)
+					return m == needleCount ? -1 : m; //match -1 = failure to find conventional in .NET
+
+				++i;
+			}
+			else
+			{
+				m = m + i - table[i];
+				i = table[i] > -1 ? table[i] : 0;
+			}
+		}
+
+		return -1;
+	}
+
+	private static int[] KMPTable<T>(IList<T> sought, IEqualityComparer<T> cmp)
+	{
+		int[] table = new int[sought.Count];
+		int pos = 2;
+		int cnd = 0;
+		table[0] = -1;
+		table[1] = 0;
+		while (pos < table.Length)
+			if (cmp.Equals(sought[pos - 1], sought[cnd]))
+				table[pos++] = ++cnd;
+			else if (cnd > 0)
+				cnd = table[cnd];
+			else
+				table[pos++] = 0;
+		return table;
+	}
+
+	#endregion
+
+	#region Comparison
+
+	public struct OffsetEqualityComparer : IEqualityComparer<int>
+	{
+		private int offset;
+
+		public OffsetEqualityComparer(int offset) => this.offset = offset;
+		public bool Equals(int a, int b) => a == b - offset;
+		public int GetHashCode(int obj) => 0;
+	}
+
 	#endregion
 
 	#region GameObject
 
-	public static Transform GetOrMakeChild(this Transform trans, string name)
+	public static GameObject GetOrMakeChild(this GameObject go, string name, bool hidden = false) =>
+		(go == null ? null : go.transform).GetOrMakeChild(name).gameObject;
+	public static Transform GetOrMakeChild(this Transform trans, string name, bool hidden = false)
 	{
+
+		Transform ret;
 		if (trans)
 		{
-			Transform ret = trans.Find(name);
-			if (ret) return ret;
+			ret = trans.Find(name);
+			if (!ret) { ret = trans.AddChild(name); }
+		}
+		else
+		{
+			ret = (GameObject.Find(name)
+				?? new GameObject(name)).transform;
 		}
 
-		GameObject go = GameObject.Find(name);
-		return go ? go.transform : trans.AddChild(name);
-
+		if (hidden) { ret.gameObject.hideFlags = HideFlags.HideInHierarchy; }
+		return ret;
 	}
 
 	public static Transform
-		AddChild(this Transform trans, string name, bool resetLocalScale = true) =>
-		trans
-			? trans.gameObject.AddChild(name, resetLocalScale).transform
-			: new GameObject(name).transform;
-
+		AddChild(this Transform trans, string name, bool resetLocalScale = true) => trans
+		? trans.gameObject.AddChild(name, resetLocalScale).transform
+		: new GameObject(name).transform;
 	public static GameObject AddChild(this GameObject input, string name,
 		bool resetLocalScale = true)
 	{
@@ -1028,19 +1595,18 @@ public static class Seb
 		joint.targetRotation = resultRotation;
 	}
 
-	#endregion
+#endregion
 
-	#region Cameras
+#region Cameras
 
-// public static Bounds OrthographicBoundsWS(this Camera camera)
-// {
-// 	float screenAspect = (float)Screen.width / (float)Screen.height;
-// 	float cameraHeight = camera.orthographicSize * 2;
-// 	Bounds bounds = new Bounds(
-// 		camera.transform.position,
-// 		new Vector3(cameraHeight * screenAspect, cameraHeight, 0));
-// 	return bounds;
-// }
+	public static Bounds OrthographicBoundsWS(this Camera camera)
+	{
+		float screenAspect = (float)Screen.width / (float)Screen.height;
+		float cameraHeight = camera.orthographicSize * 2;
+		Bounds bounds = new Bounds(camera.transform.position,
+			new Vector3(cameraHeight * screenAspect, cameraHeight, 0));
+		return bounds;
+	}
 
 	public static Rect GetCornersWs(this Camera camera, float z = 0)
 	{
@@ -1070,28 +1636,75 @@ public static class Seb
 		}
 
 	}
+	
+	public static Vector2Int Size(this RenderTexture rt) => new(rt.width, rt.height);
+#endregion
 
-	#endregion
+#region Audio
+
+	private static AudioSource audioSource;
+	public static void Play(this AudioClip clip, float volume = 1)
+	{
+		if (clip == null)
+		{
+			Debug.Log("No audio given to play");
+			return;
+		}
+		if (audioSource == null)
+		{
+			GameObject go = ((GameObject)null).GetOrMakeChild("Audio Player", true);
+			go.hideFlags = HideFlags.HideAndDontSave;
+			audioSource = go.GetComponent<AudioSource>();
+			if (audioSource == null) { audioSource = go.AddComponent<AudioSource>(); }
+		}
+		audioSource.PlayOneShot(clip, volume);
+	}
+
+#endregion
 
 	#region Logic
 
-	public static bool LiesBetween(this int num, int lower, int upper, bool inclusive = false)
+	public static bool LiesBetween(this int num, int a, int b, bool inclusiveMax = false)
 	{
-		return inclusive ? lower <= num && num <= upper : lower < num && num < upper;
+		if (a > b) (a, b) = (b, a);
+		return inclusiveMax ? a <= num && num <= b : a <= num && num < b;
 	}
 
-	public static bool LiesBetween(this float num, float lower, float upper, bool inclusive = false)
+	public static bool LiesBetween(this float num, float a, float b, bool inclusiveMax = false)
 	{
-		return inclusive ? lower <= num && num <= upper : lower < num && num < upper;
+		if (a > b) (a, b) = (b, a);
+		return inclusiveMax
+			? a <= num && num <= b
+			: a <= num && num < b;
 	}
 
 	#endregion
+		
+#region Angles
+
+	public static Quaternion ClampWithinEuler(this Quaternion angleA, Quaternion angleB,
+		Vector3 upperBounds)
+	{
+		angleA *= Quaternion.Inverse(angleB);
+		Vector3 euler = angleA.eulerAngles.WrapAngle();
+		Vector3 eulerClamped = euler.Clamp(-upperBounds, upperBounds);
+
+		return Quaternion.Euler(eulerClamped) * angleB;
+	}
+
+	public static Vector3 RotateToEuler(this Vector3 angleA, Vector3 angleB) => new(
+		Mathf.DeltaAngle(angleA.x, angleB.x),
+		Mathf.DeltaAngle(angleA.y, angleB.y),
+		Mathf.DeltaAngle(angleA.z, angleB.z));
+
+#endregion
+
 
 	#region Maths
 
-	public static float SetSign(this float value, float sign) =>
-		Mathf.Abs(value) * Mathf.Sign(sign);
-
+	public static string ToString(this float value, int decimals) =>
+		value.ToString($"F{decimals}").TrimEnd('0').TrimEnd('.');
+	public static float SetSign(this float value, float sign) => Mathf.Abs(value) * Mathf.Sign(sign);
 	public static float SetSign(this float value, bool positive) =>
 		positive ? Mathf.Abs(value) : -Mathf.Abs(value);
 
@@ -1099,8 +1712,7 @@ public static class Seb
 	public static float RoundToMultiple(this float value, float multipleOf) =>
 		Mathf.Round(value / multipleOf) * multipleOf;
 
-	public static float RoundDownToMultiple(this float value, float multipleOf) =>
-		value - value % multipleOf;
+	public static float RoundDownToMultiple(this float value, float multipleOf) => value - value % multipleOf;
 
 	public static float RoundUpToMultiple(this float value, float multipleOf) =>
 		RoundDownToMultiple(value, multipleOf) + multipleOf;
@@ -1133,6 +1745,7 @@ public static class Seb
 		ref float currentVelocity, float snapDistance, ref bool moving
 		, float smoothTime, float maxSpeed = Mathf.Infinity, bool isAngle = false)
 	{
+		if (isAngle) { target = target.UnwrapAngle() % 360; }
 		if (Mathf.Abs(target - current) < snapDistance)
 		{
 			moving = false;
@@ -1227,20 +1840,15 @@ public static class Seb
 		string pathReturn = foldernameOnly ? path.Split('/').Last() : path;
 
 		//Check whether file exists
-		if (!Directory.Exists(path))
-		{
-			return pathReturn;
-		}
+		if (!Directory.Exists(path)) { return pathReturn; }
 
 		int folderCount = 1;
 		string newPath;
 
 		do
 		{
-			newPath = String.Concat(pathReturn,
-				brackets
-					? String.Concat(path, " (", folderCount, ')')
-					: "" + ++folderCount);
+			newPath = string.Concat(pathReturn,
+				brackets ? string.Concat(path, " (", folderCount, ')') : "" + ++folderCount);
 		} while (Directory.Exists(newPath));
 
 		return newPath;
@@ -1250,10 +1858,7 @@ public static class Seb
 	/// <returns>True if folder already exists, false if it was created</returns>
 	public static bool EnsureFolderExists(this string path)
 	{
-		if (Directory.Exists(path))
-		{
-			return true;
-		}
+		if (Directory.Exists(path)) { return true; }
 
 		Directory.CreateDirectory(path);
 		return false;
@@ -1307,8 +1912,13 @@ public static class Seb
 
 	#region Enums
 
-	public static IEnumerable<T> GetFlags<T>(this T input) where T : Enum =>
-		Enum.GetValues(input.GetType()).Cast<Enum>().Where(value => input.HasFlag(value)).Cast<T>();
+	public static IEnumerable<T> GetFlags<T>(this T input) where T : Enum => Enum.GetValues(input.GetType())
+		.Cast<Enum>().Where(value => input.HasFlag(value)).Cast<T>();
+
+	public static T[] GetEnumValues<T>()
+	{
+		return Enum.GetValues(typeof(T)).Cast<T>().ToArray();
+	}
 
 	#endregion
 
@@ -1327,8 +1937,77 @@ public static class Seb
 	}
 
 	#endregion
+		
+		#region Scripts
+
+#if UNITY_EDITOR
+	public static class FindMissingScriptsRecursively
+	{
+		[MenuItem("Tools/Remove Missing Scripts Recursively Visit Prefabs")]
+		private static void FindAndRemoveMissingInSelected()
+		{
+			// EditorUtility.CollectDeepHierarchy does not include inactive children
+			var deeperSelection = Selection.gameObjects
+				.SelectMany(go => go.GetComponentsInChildren<Transform>(true))
+				.Select(t => t.gameObject);
+			var prefabs = new HashSet<Object>();
+			int compCount = 0;
+			int goCount = 0;
+			foreach (var go in deeperSelection)
+			{
+				int count = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(go);
+				if (count > 0)
+				{
+					if (PrefabUtility.IsPartOfAnyPrefab(go))
+					{
+						RecursivePrefabSource(go, prefabs, ref compCount, ref goCount);
+						count = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(go);
+						// if count == 0 the missing scripts has been removed from prefabs
+						if (count == 0)
+							continue;
+						// if not the missing scripts must be prefab overrides on this instance
+					}
+
+					Undo.RegisterCompleteObjectUndo(go, "Remove missing scripts");
+					GameObjectUtility.RemoveMonoBehavioursWithMissingScript(go);
+					compCount += count;
+					goCount++;
+				}
+			}
+
+			Debug.Log($"Found and removed {compCount} missing scripts from {goCount} GameObjects");
+		}
+
+		// Prefabs can both be nested or variants, so best way to clean all is to go through them all
+		// rather than jumping straight to the original prefab source.
+		private static void RecursivePrefabSource(GameObject instance, HashSet<Object> prefabs,
+			ref int compCount,
+			ref int goCount)
+		{
+			var source = PrefabUtility.GetCorrespondingObjectFromSource(instance);
+			// Only visit if source is valid, and hasn't been visited before
+			if (source == null || !prefabs.Add(source))
+				return;
+
+			// go deep before removing, to differantiate local overrides from missing in source
+			RecursivePrefabSource(source, prefabs, ref compCount, ref goCount);
+
+			int count = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(source);
+			if (count > 0)
+			{
+				Undo.RegisterCompleteObjectUndo(source, "Remove missing scripts");
+				GameObjectUtility.RemoveMonoBehavioursWithMissingScript(source);
+				compCount += count;
+				goCount++;
+			}
+		}
+	}
+#endif
+
+#endregion
 
 }
+
 
 [Serializable]
 public class Timer
@@ -1822,33 +2501,47 @@ public static class Consts
 	public const float MagOne = 1.41421f;
 }
 
-public static class ShaderKeyword
+public static class Keywords
 {
 	public static readonly int MainTex = Shader.PropertyToID("_MainTex");
 	public static readonly int Color = Shader.PropertyToID("_Color");
+	public static readonly int Albedo = Shader.PropertyToID("_Albedo");
+	public static readonly int Normal = Shader.PropertyToID("_Normal");
+	public static readonly int RoOcMe = Shader.PropertyToID("_RoOcMe");
 	public static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
 	public static readonly int BaseMap = Shader.PropertyToID("_BaseMap");
 	public static readonly int BaseColorMap = Shader.PropertyToID("_BaseColorMap");
 	public static readonly int FaceColor = Shader.PropertyToID("_FaceColor");
+	public static readonly int Rotation = Shader.PropertyToID("_Rotation");
+	public static readonly int Position = Shader.PropertyToID("_Position");
+	public static readonly int FaceTex = Shader.PropertyToID("_Face_Tex");
+	public static readonly int SkinTone = Shader.PropertyToID("_Skin_Tone");
+	public static readonly int MovementSpeed = Animator.StringToHash("Movement Speed");
+	public static readonly int Expression = Animator.StringToHash("Expression");
+	public static readonly int Reset = Animator.StringToHash("Reset");
+	public static readonly int Shuffle = Animator.StringToHash("Shuffle");
 }
 
 [Serializable]
 public class RefillingPool<T>
 {
-	public List<T> basePool,
+	[SerializeField]
+	private List<T> basePool,
 		activePool;
 	public bool shuffle;
 
-	public RefillingPool(IEnumerable<T> basePool)
+	public RefillingPool(IEnumerable<T> basePool, bool shuffle = true)
 	{
 		this.basePool = new List<T>(basePool);
+		this.shuffle = shuffle;
 		RefillActivePool();
 	}
 
-	public RefillingPool()
+	public RefillingPool(bool shuffle = true)
 	{
 		basePool = new List<T>();
 		activePool = new List<T>();
+		this.shuffle = shuffle;
 	}
 
 	private void RefillActivePool()
@@ -1857,37 +2550,25 @@ public class RefillingPool<T>
 		if (shuffle) activePool.Shuffle();
 	}
 
-	public T GetRandom()
-	{
-		if (activePool.Count == 0)
-		{
-			RefillActivePool();
-		}
 
-		T output = activePool.GetRandomOrDefault();
+	public T GetNext()
+	{
+		if (activePool.Count == 0) { RefillActivePool(); }
+
+		T output = activePool.FirstOrDefault();
 		activePool.Remove(output);
 		return output;
 	}
 
-	public T GetRandomWhere(Func<T, bool> @where)
+	public T GetNextWhere(Func<T, bool> predicate)
 	{
-		if (activePool.Count == 0)
-		{
-			RefillActivePool();
-		}
+		if (activePool.Count == 0) { RefillActivePool(); }
 
-		IEnumerable<T> output = activePool.Where(@where);
-		if (output.Count() == 0)
-		{
-			output = basePool.Where(@where);
-		}
+		IEnumerable<T> ret = activePool.Where(predicate);
+		if (ret.Count() == 0) { ret = basePool.Where(predicate); }
+		if (ret.Count() == 0) { return default; }
 
-		if (output.Count() == 0)
-		{
-			return default(T);
-		}
-
-		return output.GetRandomOrDefault();
+		return ret.FirstOrDefault();
 	}
 
 	public void CheckOut(T obj)
@@ -1902,11 +2583,24 @@ public class RefillingPool<T>
 		}
 	}
 
-	public void Add(IEnumerable<T> @new)
+	public void Add(T newItem)
 	{
-		basePool.AddRange(@new);
-		activePool.AddRange(@new);
+		basePool.Add(newItem);
+		activePool.Add(newItem);
 	}
+	public void Add(IEnumerable<T> newItem)
+	{
+		basePool.AddRange(newItem);
+		activePool.AddRange(newItem);
+	}
+
+	public void Clear()
+	{
+		basePool = new List<T>();
+		activePool = new List<T>();
+	}
+
+	public List<T> GetBase() => basePool;
 
 	public int Count => basePool.Count;
 	public int CurrentCount => activePool.Count;
@@ -2141,24 +2835,18 @@ public static class Lines
 
 public static class Reflection
 {
-	public static IEnumerable<T> GetAllScriptChildren<T>() where T : class
+	public static IEnumerable<Type> GetAllScriptChildren<T>() where T : class
 	{
-		return AppDomain.CurrentDomain.GetAssemblies()
-			.SelectMany(assembly => assembly.GetTypes())
+		return TypeCache.GetTypesDerivedFrom<T>()
 			.Where(t => !t.ContainsGenericParameters
-				&& t.IsSubclassOf(typeof(T))
 				&& !t.ContainsGenericParameters
-				&& !t.IsAbstract
-				&& t.GetConstructor(Type.EmptyTypes) != null)
-			.Select(type => Activator.CreateInstance(type) as T);
+				&& !t.IsAbstract);
 	}
 
 	public static IEnumerable<Type> GetAllSingletonScriptChildrenTypes<T>() where T : class
 	{
-		return AppDomain.CurrentDomain.GetAssemblies()
-			.SelectMany(assembly => assembly.GetTypes())
+		return TypeCache.GetTypesDerivedFrom<T>()
 			.Where(t => !t.ContainsGenericParameters
-				&& t.IsSubclassOf(typeof(T))
 				&& t.GetConstructor(Type.EmptyTypes) != null
 				&& !t.IsAbstract)
 			.Select(t =>
@@ -2175,6 +2863,495 @@ namespace ProbabilityExtensions
 
 	public static class ProbabilityExtensions
 	{
-		public static bool getPercentChance(this int chance) => Random.value * 100 < chance;
+		public static bool GetPercentChance(this int chance) => Random.value * 100 < chance;
+		public static float ToSeededRandomValue(this int seed)
+		{
+			Random.InitState(seed);
+			return Random.value;
+		}
+	}
+}
+
+/// <summary>
+/// https://stackoverflow.com/questions/12373800/3-digit-currency-code-to-currency-symbol
+/// </summary>
+public static class CurrencyCodeMapper
+{
+	private static readonly Dictionary<string, string> SymbolsByCode;
+
+	public static string GetSymbol(string code) { return SymbolsByCode[code]; }
+
+	static CurrencyCodeMapper()
+	{
+		SymbolsByCode = new Dictionary<string, string>();
+
+		foreach (RegionInfo region in CultureInfo.GetCultures(CultureTypes.SpecificCultures)
+			         .Select(x => new RegionInfo(x.LCID)))
+		{
+			SymbolsByCode.TryAdd(region.ISOCurrencySymbol, region.CurrencySymbol);
+		}
+	}
+}
+
+public static class LinqExtensions
+{
+	/// <summary>Calls an action on each item before yielding them.</summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="action">The action to call for each item.</param>
+	public static IEnumerable<T> Examine<T>(this IEnumerable<T> source, Action<T> action)
+	{
+		foreach (T obj in source)
+		{
+			action(obj);
+			yield return obj;
+		}
+	}
+
+	/// <summary>Perform an action on each item.</summary>
+	/// <param name="source">The source.</param>
+	/// <param name="action">The action to perform.</param>
+	public static IEnumerable<T> ForEach<T>(this IEnumerable<T> source, Action<T> action)
+	{
+		foreach (T obj in source)
+			action(obj);
+		return source;
+	}
+
+	/// <summary>Perform an action on each item.</summary>
+	/// <param name="source">The source.</param>
+	/// <param name="action">The action to perform.</param>
+	public static IEnumerable<T> ForEach<T>(this IEnumerable<T> source, Action<T, int> action)
+	{
+		int num = 0;
+		foreach (T obj in source)
+			action(obj, num++);
+		return source;
+	}
+
+	/// <summary>Convert each item in the collection.</summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="converter">Func to convert the items.</param>
+	public static IEnumerable<T> Convert<T>(this IEnumerable source, Func<object, T> converter)
+	{
+		foreach (object obj in source)
+			yield return converter(obj);
+	}
+
+
+	/// <summary>Add an item to the beginning of a collection.</summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="prepend">Func to create the item to prepend.</param>
+	public static IEnumerable<T> PrependWith<T>(this IEnumerable<T> source, Func<T> prepend)
+	{
+		yield return prepend();
+		foreach (T obj in source)
+			yield return obj;
+	}
+
+	/// <summary>Add an item to the beginning of a collection.</summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="prepend">The item to prepend.</param>
+	public static IEnumerable<T> PrependWith<T>(this IEnumerable<T> source, T prepend)
+	{
+		yield return prepend;
+		foreach (T obj in source)
+			yield return obj;
+	}
+
+	/// <summary>
+	/// Add a collection to the beginning of another collection.
+	/// </summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="prepend">The collection to prepend.</param>
+	public static IEnumerable<T> PrependWith<T>(this IEnumerable<T> source, IEnumerable<T> prepend)
+	{
+		foreach (T obj in prepend)
+			yield return obj;
+		foreach (T obj in source)
+			yield return obj;
+	}
+
+	/// <summary>
+	/// Add an item to the beginning of another collection, if a condition is met.
+	/// </summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="condition">The condition.</param>
+	/// <param name="prepend">Func to create the item to prepend.</param>
+	public static IEnumerable<T> PrependIf<T>(
+		this IEnumerable<T> source,
+		bool condition,
+		Func<T> prepend)
+	{
+		if (condition)
+			yield return prepend();
+		foreach (T obj in source)
+			yield return obj;
+	}
+
+	/// <summary>
+	/// Add an item to the beginning of another collection, if a condition is met.
+	/// </summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="condition">The condition.</param>
+	/// <param name="prepend">The item to prepend.</param>
+	public static IEnumerable<T> PrependIf<T>(
+		this IEnumerable<T> source,
+		bool condition,
+		T prepend)
+	{
+		if (condition)
+			yield return prepend;
+		foreach (T obj in source)
+			yield return obj;
+	}
+
+	/// <summary>
+	/// Add a collection to the beginning of another collection, if a condition is met.
+	/// </summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="condition">The condition.</param>
+	/// <param name="prepend">The collection to prepend.</param>
+	public static IEnumerable<T> PrependIf<T>(
+		this IEnumerable<T> source,
+		bool condition,
+		IEnumerable<T> prepend)
+	{
+		if (condition)
+		{
+			foreach (T obj in prepend)
+				yield return obj;
+		}
+		foreach (T obj in source)
+			yield return obj;
+	}
+
+	/// <summary>
+	/// Add an item to the beginning of another collection, if a condition is met.
+	/// </summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="condition">The condition.</param>
+	/// <param name="prepend">Func to create the item to prepend.</param>
+	public static IEnumerable<T> PrependIf<T>(
+		this IEnumerable<T> source,
+		Func<bool> condition,
+		Func<T> prepend)
+	{
+		if (condition())
+			yield return prepend();
+		foreach (T obj in source)
+			yield return obj;
+	}
+
+	/// <summary>
+	/// Add an item to the beginning of another collection, if a condition is met.
+	/// </summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="condition">The condition.</param>
+	/// <param name="prepend">The item to prepend.</param>
+	public static IEnumerable<T> PrependIf<T>(
+		this IEnumerable<T> source,
+		Func<bool> condition,
+		T prepend)
+	{
+		if (condition())
+			yield return prepend;
+		foreach (T obj in source)
+			yield return obj;
+	}
+
+	/// <summary>
+	/// Add a collection to the beginning of another collection, if a condition is met.
+	/// </summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="condition">The condition.</param>
+	/// <param name="prepend">The collection to prepend.</param>
+	public static IEnumerable<T> PrependIf<T>(
+		this IEnumerable<T> source,
+		Func<bool> condition,
+		IEnumerable<T> prepend)
+	{
+		if (condition())
+		{
+			foreach (T obj in prepend)
+				yield return obj;
+		}
+		foreach (T obj in source)
+			yield return obj;
+	}
+
+	/// <summary>
+	/// Add an item to the beginning of another collection, if a condition is met.
+	/// </summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="condition">The condition.</param>
+	/// <param name="prepend">Func to create the item to prepend.</param>
+	public static IEnumerable<T> PrependIf<T>(
+		this IEnumerable<T> source,
+		Func<IEnumerable<T>, bool> condition,
+		Func<T> prepend)
+	{
+		if (condition(source))
+			yield return prepend();
+		foreach (T obj in source)
+			yield return obj;
+	}
+
+	/// <summary>
+	/// Add an item to the beginning of another collection, if a condition is met.
+	/// </summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="condition">The condition.</param>
+	/// <param name="prepend">The item to prepend.</param>
+	public static IEnumerable<T> PrependIf<T>(
+		this IEnumerable<T> source,
+		Func<IEnumerable<T>, bool> condition,
+		T prepend)
+	{
+		if (condition(source))
+			yield return prepend;
+		foreach (T obj in source)
+			yield return obj;
+	}
+
+	/// <summary>
+	/// Add a collection to the beginning of another collection, if a condition is met.
+	/// </summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="condition">The condition.</param>
+	/// <param name="prepend">The collection to prepend.</param>
+	public static IEnumerable<T> PrependIf<T>(
+		this IEnumerable<T> source,
+		Func<IEnumerable<T>, bool> condition,
+		IEnumerable<T> prepend)
+	{
+		if (condition(source))
+		{
+			foreach (T obj in prepend)
+				yield return obj;
+		}
+		foreach (T obj in source)
+			yield return obj;
+	}
+
+	/// <summary>Add an item to the end of a collection.</summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="append">Func to create the item to append.</param>
+	public static IEnumerable<T> AppendWith<T>(this IEnumerable<T> source, Func<T> append)
+	{
+		foreach (T obj in source)
+			yield return obj;
+		yield return append();
+	}
+
+	/// <summary>Add an item to the end of a collection.</summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="append">The item to append.</param>
+	public static IEnumerable<T> AppendWith<T>(this IEnumerable<T> source, T append)
+	{
+		foreach (T obj in source)
+			yield return obj;
+		yield return append;
+	}
+
+	/// <summary>Add a collection to the end of another collection.</summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="append">The collection to append.</param>
+	public static IEnumerable<T> AppendWith<T>(this IEnumerable<T> source, IEnumerable<T> append)
+	{
+		foreach (T obj in source)
+			yield return obj;
+		foreach (T obj in append)
+			yield return obj;
+	}
+
+	/// <summary>
+	/// Add an item to the end of a collection if a condition is met.
+	/// </summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="condition">The condition.</param>
+	/// <param name="append">Func to create the item to append.</param>
+	public static IEnumerable<T> AppendIf<T>(
+		this IEnumerable<T> source,
+		bool condition,
+		Func<T> append)
+	{
+		foreach (T obj in source)
+			yield return obj;
+		if (condition)
+			yield return append();
+	}
+
+	/// <summary>
+	/// Add an item to the end of a collection if a condition is met.
+	/// </summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="condition">The condition.</param>
+	/// <param name="append">The item to append.</param>
+	public static IEnumerable<T> AppendIf<T>(this IEnumerable<T> source, bool condition, T append)
+	{
+		foreach (T obj in source)
+			yield return obj;
+		if (condition)
+			yield return append;
+	}
+
+	/// <summary>
+	/// Add a collection to the end of another collection if a condition is met.
+	/// </summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="condition">The condition.</param>
+	/// <param name="append">The collection to append.</param>
+	public static IEnumerable<T> AppendIf<T>(
+		this IEnumerable<T> source,
+		bool condition,
+		IEnumerable<T> append)
+	{
+		foreach (T obj in source)
+			yield return obj;
+		if (condition)
+		{
+			foreach (T obj in append)
+				yield return obj;
+		}
+	}
+
+	/// <summary>
+	/// Add an item to the end of a collection if a condition is met.
+	/// </summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="condition">The condition.</param>
+	/// <param name="append">Func to create the item to append.</param>
+	public static IEnumerable<T> AppendIf<T>(
+		this IEnumerable<T> source,
+		Func<bool> condition,
+		Func<T> append)
+	{
+		foreach (T obj in source)
+			yield return obj;
+		if (condition())
+			yield return append();
+	}
+
+	/// <summary>
+	/// Add an item to the end of a collection if a condition is met.
+	/// </summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="condition">The condition.</param>
+	/// <param name="append">The item to append.</param>
+	public static IEnumerable<T> AppendIf<T>(
+		this IEnumerable<T> source,
+		Func<bool> condition,
+		T append)
+	{
+		foreach (T obj in source)
+			yield return obj;
+		if (condition())
+			yield return append;
+	}
+
+	/// <summary>
+	/// Add a collection to the end of another collection if a condition is met.
+	/// </summary>
+	/// <param name="source">The collection.</param>
+	/// <param name="condition">The condition.</param>
+	/// <param name="append">The collection to append.</param>
+	public static IEnumerable<T> AppendIf<T>(
+		this IEnumerable<T> source,
+		Func<bool> condition,
+		IEnumerable<T> append)
+	{
+		foreach (T obj in source)
+			yield return obj;
+		if (condition())
+		{
+			foreach (T obj in append)
+				yield return obj;
+		}
+	}
+
+	/// <summary>
+	/// Returns and casts only the items of type <typeparamref name="T" />.
+	/// </summary>
+	/// <param name="source">The collection.</param>
+	public static IEnumerable<T> FilterCast<T>(this IEnumerable source)
+	{
+		foreach (object obj1 in source)
+		{
+			if (obj1 is T obj2)
+				yield return obj2;
+		}
+	}
+
+	/// <summary>Adds a collection to a hashset.</summary>
+	/// <param name="hashSet">The hashset.</param>
+	/// <param name="range">The collection.</param>
+	public static void AddRange<T>(this HashSet<T> hashSet, IEnumerable<T> range)
+	{
+		foreach (T obj in range)
+			hashSet.Add(obj);
+	}
+
+	/// <summary>
+	/// Returns <c>true</c> if the list is either null or empty. Otherwise <c>false</c>.
+	/// </summary>
+	/// <param name="list">The list.</param>
+	public static bool IsNullOrEmpty<T>(this IList<T> list) => list == null || list.Count == 0;
+
+	/// <summary>Sets all items in the list to the given value.</summary>
+	/// <param name="list">The list.</param>
+	/// <param name="item">The value.</param>
+	public static void Populate<T>(this IList<T> list, T item)
+	{
+		int count = list.Count;
+		for (int index = 0; index < count; ++index)
+			list[index] = item;
+	}
+
+	/// <summary>
+	/// Adds the elements of the specified collection to the end of the IList&lt;T&gt;.
+	/// </summary>
+	public static void AddRange<T>(this IList<T> list, IEnumerable<T> collection)
+	{
+		if (list is List<T>)
+		{
+			((List<T>)list).AddRange(collection);
+		}
+		else
+		{
+			foreach (T obj in collection)
+				list.Add(obj);
+		}
+	}
+
+	/// <summary>Sorts an IList</summary>
+	public static void Sort<T>(this IList<T> list, Comparison<T> comparison)
+	{
+		if (list is List<T>)
+		{
+			((List<T>)list).Sort(comparison);
+		}
+		else
+		{
+			List<T> objList = new List<T>((IEnumerable<T>)list);
+			objList.Sort(comparison);
+			for (int index = 0; index < list.Count; ++index)
+				list[index] = objList[index];
+		}
+	}
+
+	/// <summary>Sorts an IList</summary>
+	public static void Sort<T>(this IList<T> list)
+	{
+		if (list is List<T>)
+		{
+			((List<T>)list).Sort();
+		}
+		else
+		{
+			List<T> objList = new List<T>((IEnumerable<T>)list);
+			objList.Sort();
+			for (int index = 0; index < list.Count; ++index)
+				list[index] = objList[index];
+		}
 	}
 }

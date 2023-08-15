@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Sirenix.Utilities;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -34,7 +33,7 @@ public abstract class SingletonScriptableObject<T> : ScriptableMonoObject, ICach
 		if (instances.Length == 0)
 		{
 		#if UNITY_EDITOR
-			_instance = ScriptableObject.CreateInstance<T>();
+			_instance = CreateInstance<T>();
 			AssetDatabase.CreateAsset(_instance,
 				"Assets/Resources/" + typeof(T).ToString().NormalizeCamel() + ".asset");
 			AssetDatabase.SaveAssets();
@@ -95,7 +94,7 @@ public class ScriptableSingletonHelper : MonoBehaviour
 			if (guids.Length > 1)
 			{
 				Debug.Log(
-					$"Multiple instances of {monoObjectType} found at:{string.Join("\n", guids.Select(AssetDatabase.GUIDToAssetPath))}");
+					$"Multiple instances of {monoObjectType} found at:{string.Join(", ", guids.Select(AssetDatabase.GUIDToAssetPath))}");
 			}
 			else if (guids.Length == 0)
 			{

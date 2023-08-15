@@ -6,41 +6,66 @@ using UnityEditor;
 using UnityEngine;
 
 
-public class ClassSettings<T> : Settings where T : CustomMono {}
+public class Settings<T> : Settings where T : class {}
 
 [Serializable, InlineProperty, HideLabel]
 public class Settings
 {
+	[ClearOnReload]
 	private static Dictionary<Type, SettingsScriptable> classTypeDic, settingTypeDic;
 
-	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad), InitializeOnLoadMethod]
+	[InitializeOnLoadMethod, MenuItem("Tools/Reload Settings"), ExecuteOnReload]
 	public static void OnScriptReload()
 	{
 		PopulateDic();
-		foreach (Type newType in ScriptablesDatabase.Get<SettingsScriptable>()
-			         .Select(s => s.settings.GetType())
-			         .Except<Type>(classTypeDic.Keys))
+		bool hasChanged = false;
+		IEnumerable<Type> settingTypes = Reflection.GetAllScriptChildren<Settings>().Except(settingTypeDic.Keys);
+		foreach (Type newType in settingTypes)
 		{
 			SettingsScriptable scriptable =
-				ScriptableMonoObject.CreateNew<SettingsScriptable>(newType.Name.NormalizeCamel()) as SettingsScriptable;
+				ScriptableMonoObject.CreateNew<SettingsScriptable>(newType.Name.NormalizeCamel());
 			scriptable.settings = Activator.CreateInstance(newType) as Settings;
-		}
-	}
 
-	private static void TryPopulateDic()
-	{
-		if (settingTypeDic is null || settingTypeDic.Count == 0 || Application.isEditor && !Application.isPlaying)
+			hasChanged = true;
+			EditorUtility.SetDirty(scriptable);
+		}
+
+		if (hasChanged)
 		{
 			PopulateDic();
 		}
 	}
 
+	private static void TryPopulateDic()
+	{
+		if (settingTypeDic is null || settingTypeDic.Count == 0)
+		{
+			PopulateDic();
+		}
+	}
+
+
 	private static void PopulateDic()
 	{
+		ScriptablesDatabase.TryRefresh();
 		settingTypeDic = new Dictionary<Type, SettingsScriptable>(ScriptablesDatabase.Get(typeof(SettingsScriptable))
-			.Select(t => new KeyValuePair<Type, SettingsScriptable>(
-				((SettingsScriptable)t).settings.GetType(),
-				(SettingsScriptable)t)));
+			.Select(t =>
+			{
+				if (t is not SettingsScriptable s)
+				{
+					Debug.LogError($"Error with settings");
+
+					return default;
+				}
+
+				if (s is not { settings: not null })
+				{
+					Debug.LogError($"Null setting on {AssetDatabase.GetAssetPath(t)}");
+					return default;
+				}
+
+				return new KeyValuePair<Type, SettingsScriptable>(s.settings.GetType(), s);
+			}).Where(s => s.Value != null));
 		classTypeDic = settingTypeDic.ToDictionary(kvp => GetAssociatedType(kvp.Value.settings), kvp => kvp.Value);
 	}
 
@@ -60,14 +85,14 @@ public class Settings
 		return null;
 	}
 
-	public static SettingsScriptable GetBox(Type type, bool targetClassType)
+	public static SettingsScriptable GetBox(Type type, bool targetClassType, bool silent = false)
 	{
 		TryPopulateDic();
-		
+
 		Dictionary<Type, SettingsScriptable> dic = targetClassType ? classTypeDic : settingTypeDic;
 		if (dic.TryGetValue(type, out SettingsScriptable existingBox)) return existingBox;
 
-		Debug.LogError($"No settings of type {type} found");
+		if (!silent) Debug.LogError($"No settings of type {type} found");
 
 		return null;
 	}

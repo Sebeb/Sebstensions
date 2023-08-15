@@ -1,4 +1,3 @@
-using Nrjwolf.Tools.AttachAttributes;
 using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
@@ -6,7 +5,7 @@ using UnityEngine.Experimental.Rendering;
 [ExecuteInEditMode]
 public class ScreenRenderTextureOut : CustomMono
 {
-    [SerializeField, GetComponent]
+    [SerializeField]
     private Camera cam;
     public string bufferName;
     public GraphicsFormat format = GraphicsFormat.R32G32B32A32_SFloat;

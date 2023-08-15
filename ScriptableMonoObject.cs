@@ -1,13 +1,12 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Sirenix.OdinInspector;
 using Sirenix.Utilities;
 using UnityEditor;
 using UnityEngine;
-using Weaver;
 using Humanizer;
 
 
@@ -15,19 +14,20 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 {
 	[HideInInspector]
 	public new string name;
-	private static readonly string[] systemFileWords = { "Scriptable Object", "Scriptable", "Manager" };
+	private static readonly string[] systemFileWords = { "Singleton", "Scriptable Object", "Scriptable", "Manager" };
 
-	public static string TypeToDirectory(Type type)
+	public static string TypeToDirectory(Type type, Type baseType)
 	{
-		ScriptablesDatabase.Refresh();
-		IEnumerable<Type> baseTypes = type.GetBaseTypes(true)
-			.Where(t => !t.IsInterface)
-			.Reverse()
-			.SkipWhile(t => t != typeof(ScriptableMonoObject));
-		if (ScriptablesDatabase.Get(type).Count() == 1)
-		{
-			baseTypes = baseTypes.SkipLast(1);
-		}
+		// ScriptablesDatabase.Refresh();
+		IEnumerable<Type> baseTypes = type.GetBaseTypes(true);
+
+		baseTypes = baseTypes.Where(t => !t.IsInterface);
+		baseTypes = baseTypes.Reverse();
+		baseTypes = baseTypes.SkipWhile(t => t != baseType);
+		// if (ScriptablesDatabase.Get(type).Count() == 1)
+		// {
+		// 	baseTypes = baseTypes.SkipLast(1);
+		// }
 
 		if (!baseTypes.Any()) return "";
 
@@ -52,7 +52,7 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 	{
 		IEnumerable<(string, string)> oldNewPath = ScriptablesDatabase.Get(typeof(ScriptableMonoObject))
 			.Select(m => (m, AssetDatabase.GetAssetPath(m)))
-			.Select(ma => (ma.Item2, $"Assets/{TypeToDirectory(ma.Item1.GetType())}{ma.Item1.name}.asset"))
+			.Select(ma => (ma.Item2, $"Assets/{TypeToDirectory(ma.Item1.GetType(), typeof(ScriptableMonoObject))}{ma.Item1.name}.asset"))
 			.Where(t => t.Item1 != t.Item2);
 
 		// Wait for user confirmaion
@@ -64,11 +64,12 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 
 		foreach ((string oldPath, string newPath) in oldNewPath)
 		{
-			Path.GetDirectoryName(newPath).EnsureFolderExists();
+			if (!Path.GetDirectoryName(newPath).EnsureFolderExists()) AssetDatabase.Refresh();
 			AssetDatabase.MoveAsset(oldPath, newPath);
 
 			Debug.Log($"Moving {oldPath} to {newPath}");
 		}
+
 		AssetDatabase.SaveAssets();
 
 	}
@@ -81,7 +82,7 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 			return null;
 		}
 
-		string path = $"Assets/{TypeToDirectory(type)}";
+		string path = $"Assets/{TypeToDirectory(type, typeof(ScriptableMonoObject))}";
 		name ??= type.Name.NormalizeCamel();
 		string assetPath = path + name + ".asset";
 		path.EnsureFolderExists();
@@ -118,6 +119,8 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 
 	#endif
 	}
+
+	public Coroutine StartCoroutine(IEnumerator coroutine) => ScriptHelper.DoCoroutine(coroutine);
 
 	public virtual void OnBeforeSerialize() => SetAssetName();
 

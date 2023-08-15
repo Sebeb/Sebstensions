@@ -1,54 +1,64 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using Sirenix.OdinInspector;
+using Sirenix.Utilities;
 using UnityEngine;
 using UnityEditor;
+using Object = UnityEngine.Object;
 
 
 public abstract class CustomMono : MonoBehaviour
 {
 #if UNITY_EDITOR
-	[FoldoutGroup("Settings"), ShowInInspector, LabelText("Settings"), ShowIf("settingsType"), InlineEditor(InlineEditorObjectFieldModes.CompletelyHidden), OnInspectorGUI("SetSettings")]
+	[FoldoutGroup("Settings"), ShowInInspector, LabelText("Settings"), ShowIf("GetSettings"),
+	 InlineEditor(InlineEditorObjectFieldModes.CompletelyHidden), OnInspectorInit("SetSettings")]
 	private SettingsScriptable serializedSettings;
+
 	private void SetSettings()
 	{
-		if (serializedSettings == null && settingsType != null)
+		if (serializedSettings == null)
 		{
-			serializedSettings = Settings.GetBox(settingsType, targetClassType: false);
+			serializedSettings = GetSettings();
 		}
 	}
+
+	private SettingsScriptable GetSettings() => Settings.GetBox(GetType(), targetClassType: true, silent: true);
 #endif
 	protected static bool quitting => ScriptHelper.quitting;
+	[ClearOnReload]
 	public static Action OnScreenSizeChange;
 
-	public virtual Type settingsType => null;
-	
-	/// <summary>
-	/// Called once per class on game and editor awake, this should be assigned a static method
-	/// </summary>
-	protected virtual Action onStaticAwake { get; set; }
+
+	[ClearOnReload]
+	internal protected static Map<Type, Action> onStaticAwake = new();
+
 
 	protected CustomMono()
 	{
+		AssignDelegates();
+	}
+
+	internal void AssignDelegates()
+	{
+		// Debug.Log("Assigning delegates");
 		CustomMonoHelper.OnAssign += TryAssign;
 		CustomMonoHelper.OnEditorAwake += TryOnEditorAwake;
-		CustomMonoHelper.OnClassAwake += () => onStaticAwake?.Invoke();
 	}
+
 
 	private void TryAssign()
 	{
-
 		if (this == null
 		    || gameObject == null
 		    || string.IsNullOrEmpty(gameObject.scene.name))
 		{
 			CustomMonoHelper.OnAssign -= TryAssign;
-
 			return;
 		}
 
 		Assign();
-
 	}
 
 	/// <summary>
@@ -86,16 +96,30 @@ public abstract class CustomMono : MonoBehaviour
 [DefaultExecutionOrder(-9999)]
 public static class CustomMonoHelper
 {
-	internal static Action OnAssign, OnEditorAwake, OnClassAwake;
+	[ClearOnReload]
+	internal static Action OnAssign, OnEditorAwake;
 	private static HashSet<CustomMono> monos;
 
 
-	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
 	private static void PlayAwake()
 	{
-		// Debug.Log("Player awake");
+		IEnumerable<Type> customMonoClasses = Reflection.GetAllScriptChildren<CustomMono>();
+
+		IEnumerable<MethodInfo> methods =
+			customMonoClasses
+				.SelectMany(t => t.GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static))
+				.Where(m => m.Name == "ClassAwake");
+
+		
+		foreach (CustomMono customMono in Object.FindObjectsOfType<CustomMono>(true))
+		{
+			customMono.AssignDelegates();
+		}
+
 		OnAssign?.Invoke();
-		OnClassAwake?.Invoke();
+		
+		methods.ForEach(m => m.Invoke(null, null));
 	}
 
 #if UNITY_EDITOR
@@ -109,6 +133,11 @@ public static class CustomMonoHelper
 		if (state == PlayModeStateChange.EnteredEditMode)
 		{
 			EditorAwake();
+		}
+		else if (state == PlayModeStateChange.ExitingPlayMode)
+		{
+			OnAssign = null;
+			OnEditorAwake = null;
 		}
 	}
 

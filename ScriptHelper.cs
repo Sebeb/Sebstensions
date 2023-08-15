@@ -1,15 +1,8 @@
 ﻿using System.Collections;
-using UnityEngine;
-#if UNITY_EDITOR
 using UnityEditor;
-#endif
+using UnityEngine;
 
-
-[DefaultExecutionOrder(-110)
-#if UNITY_EDITOR
- , ExecuteInEditMode
-    #endif
-]
+[DefaultExecutionOrder(-110), ExecuteInEditMode]
 public class ScriptHelper : MonoBehaviour
 {
     public static bool quitting { get; private set; }
@@ -25,15 +18,15 @@ public class ScriptHelper : MonoBehaviour
                 Debug.LogError("Coroutines only operational in play-mode");
                 return null;
             }
-            _instance ??= Init();
+            if (_instance == null)
+            {
+                _instance = Init();
+            }
             return _instance;
         }
     }
 
-    public static Coroutine DoCoroutine(IEnumerator routine)
-    {
-        return mono.StartCoroutine(routine);
-    }
+    public static Coroutine DoCoroutine(IEnumerator routine) => mono.StartCoroutine(routine);
 
     private static bool fakeStart;
     [
@@ -43,7 +36,7 @@ public class ScriptHelper : MonoBehaviour
         RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     public static ScriptHelper Init()
     {
-        // Debug.Log("Initing");
+        Debug.Log("Initing");
         if (_instance != null) { return _instance; }
 
         GameObject runnerObj = GameObject.Find("Script Helper");
@@ -59,8 +52,7 @@ public class ScriptHelper : MonoBehaviour
             fakeStart = true;
         }
 
-        runnerObj.hideFlags = HideFlags.DontSave;
-
+        runnerObj.hideFlags = HideFlags.DontSave | HideFlags.HideInHierarchy;
         return _instance;
     }
     
@@ -92,6 +84,7 @@ public class ScriptHelper : MonoBehaviour
     {
         quitting = true;
         ScriptableMonoObject.ResetMonoScripts();
+        CustomMono.OnScreenSizeChange = null;
         Destroy(gameObject);
     }
 }
