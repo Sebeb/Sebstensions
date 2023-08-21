@@ -8,15 +8,23 @@ using Sirenix.Utilities;
 using UnityEditor;
 using UnityEngine;
 using Humanizer;
+using Sirenix.OdinInspector;
 
 
 public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerializationCallbackReceiver
 {
-	[HideInInspector]
+	[ShowInInlineEditors]
 	public new string name;
-	private static readonly string[] systemFileWords = { "Singleton", "Scriptable Object", "Scriptable", "Manager" };
+	private bool isSingleton => GetType().IsSubclassOfRawGeneric(typeof(SingletonScriptableObject<>));
+	[HideIf("isSingleton")]
+	public bool enabled = true;
+	private static readonly string[] systemFileWords =
+		{ "Singleton", "Scriptable Object", "Scriptable", "Manager" };
 
-	public static string TypeToDirectory(Type type, Type baseType)
+	protected virtual bool autoMovable => true;
+
+	public virtual IEnumerable<string> GetCustomPathSuffixes() => default;
+	public static IEnumerable<string> GetTypeDirectory(Type type, Type baseType)
 	{
 		// ScriptablesDatabase.Refresh();
 		IEnumerable<Type> baseTypes = type.GetBaseTypes(true);
@@ -29,9 +37,9 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 		// 	baseTypes = baseTypes.SkipLast(1);
 		// }
 
-		if (!baseTypes.Any()) return "";
+		if (!baseTypes.Any()) return new[] { "Resources" };
 
-		var path = string.Join("/",
+		return
 			baseTypes.Select(t => t.GetNiceName()
 					.Split('<')[0]
 					.NormalizeCamel())
@@ -40,25 +48,40 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 					.Pluralize(inputIsKnownToBeSingular: false))
 				.Where(s => !string.IsNullOrEmpty(s))
 				.Skip(1)
-				.Prepend("Data"));
-		path += "/";
-		return path;
+				.Prepend("Resources");
+	}
+	public string GetDefaultPath()
+	{
+		IEnumerable<string> breadcrumbs = new[] { "Assets" }
+			.Concat(GetTypeDirectory(GetType(), typeof(ScriptableMonoObject))
+				.Concat(GetCustomPathSuffixes())).Concat(!enabled ? new[] { "Disabled" } : new string[0]);
+
+		return breadcrumbs.Join("/");
 	}
 
-	public static T CreateNew<T>(string name = null) where T : ScriptableMonoObject => CreateNew(typeof(T), name) as T;
+	public static T CreateNew<T>(string name = null) where T : ScriptableMonoObject =>
+		CreateNew(typeof(T), name) as T;
 
 	[MenuItem("Tools/Scriptable Objects/Reset Locations", priority = -99998)]
 	public static void MoveAllToDefaultLocation()
 	{
 		IEnumerable<(string, string)> oldNewPath = ScriptablesDatabase.Get(typeof(ScriptableMonoObject))
+			.Where(s => s.autoMovable)
 			.Select(m => (m, AssetDatabase.GetAssetPath(m)))
-			.Select(ma => (ma.Item2, $"Assets/{TypeToDirectory(ma.Item1.GetType(), typeof(ScriptableMonoObject))}{ma.Item1.name}.asset"))
+			.Select(ma => (ma.Item2, ma.Item1.GetDefaultPath() + $"/{ma.Item1.name}.asset"))
 			.Where(t => t.Item1 != t.Item2);
 
-		// Wait for user confirmaion
+		if (!oldNewPath.Any())
+		{
+			EditorUtility.DisplayDialog("Move Scriptable Objects", "No scriptable objects to move", "OK");
+			return;
+		}
+
+		// Wait for user confirmation
+		string directoryChanges = string.Join("\n", oldNewPath.Select(t => $"{t.Item1} -> {t.Item2}"));
+		Debug.Log($"{oldNewPath.Count()} changes:\n{directoryChanges}");
 		if (!EditorUtility.DisplayDialog("Move Scriptable Objects",
-			    $"Move {oldNewPath.Count()} scriptable objects?\n"
-			    + string.Join("\n", oldNewPath.Select(t => $"{t.Item1} -> {t.Item2}")),
+			    $"Move {oldNewPath.Count()} scriptable objects?\n{directoryChanges}",
 			    "Yes",
 			    "No")) return;
 
@@ -81,16 +104,53 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 			Debug.LogError("Could not create new singleton of type " + type.GetNiceFullName());
 			return null;
 		}
-
-		string path = $"Assets/{TypeToDirectory(type, typeof(ScriptableMonoObject))}";
-		name ??= type.Name.NormalizeCamel();
-		string assetPath = path + name + ".asset";
+		return SaveExisting(newSingleton);
+	}
+	public enum OverwriteMode
+	{
+		Overwrite, Increment, Ignore
+	}
+	public static ScriptableMonoObject SaveExisting(ScriptableMonoObject existingObject, string name = null,
+		OverwriteMode overwriteMode = OverwriteMode.Increment)
+	{
+		string path = existingObject.GetDefaultPath();
+		string typeName = existingObject.GetType().Name.Humanize(LetterCasing.Title);
+		name ??= !existingObject.name.IsNullOrWhiteSpace()
+			? existingObject.name
+			: typeName;
+		string assetPath = $"{path}/{name}.asset";
 		path.EnsureFolderExists();
 
-		AssetDatabase.CreateAsset(newSingleton, assetPath);
-		AssetDatabase.SaveAssets();
-		Debug.Log($"Created new {type.Name.NormalizeCamel()} at {assetPath}");
-		return AssetDatabase.LoadAssetAtPath<ScriptableMonoObject>(assetPath);
+		OverwriteMode? overwrite = null;
+		if (overwriteMode is OverwriteMode.Increment)
+		{
+			path = path.GetIncrementalFolderNumber();
+			overwrite = OverwriteMode.Increment;
+		}
+		else
+		{
+			overwrite = !File.Exists(assetPath) ? null : overwriteMode;
+		}
+
+		ScriptableMonoObject createdAsset = null;
+		if (overwrite is not OverwriteMode.Ignore)
+		{
+			AssetDatabase.CreateAsset(existingObject, assetPath);
+			AssetDatabase.SaveAssets();
+			createdAsset = AssetDatabase.LoadAssetAtPath<ScriptableMonoObject>(assetPath);
+		}
+		Debug.Log(
+			string.Format("{0} {1} at {2}",
+				overwrite switch
+				{
+					OverwriteMode.Ignore => "Skipped existing",
+					OverwriteMode.Overwrite => "Overwrote",
+					_ => "Created new"
+				},
+				typeName,
+				assetPath),
+			createdAsset);
+		return createdAsset;
 	}
 
 	protected void SetAssetName(string newName = null)
@@ -126,9 +186,9 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 
 	public void OnAfterDeserialize() {}
 
-	#region Database
+#region Database
 
-	#endregion
+#endregion
 
 	public static void StartMonoScripts()
 	{
@@ -152,7 +212,7 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 		}
 		initedOnce = true;
 	}
-	
+
 	public static void UpdateMonoScripts()
 	{
 		if (!Application.isPlaying) { return; }
@@ -176,9 +236,9 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 
 	protected virtual void Initialize() {}
 	protected virtual void ScriptAwake() {}
-	protected virtual void Update(){}
+	protected virtual void Update() {}
 	protected virtual void Deinitialize() {}
-	
+
 	protected static Coroutine StartCoroutine(IEnumerator coro, bool allowInEditor = false) =>
 		ScriptHelper.StartCoroutine(coro, allowInEditor);
 	protected void StopCoroutine(Coroutine coro) => ScriptHelper.StopCoroutine(coro);

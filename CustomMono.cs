@@ -104,7 +104,7 @@ public static class CustomMonoHelper
 	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
 	private static void PlayAwake()
 	{
-		IEnumerable<Type> customMonoClasses = Reflection.GetAllScriptChildren<CustomMono>();
+		IEnumerable<Type> customMonoClasses = Reflection.GetAllScriptChildTypes<CustomMono>();
 
 		IEnumerable<MethodInfo> methods =
 			customMonoClasses
