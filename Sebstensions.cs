@@ -2900,9 +2900,11 @@ public static class Lines
 
 public static class Reflection
 {
-	public static IEnumerable<Type> GetAllScriptChildTypes<T>() where T : class
+	public static IEnumerable<Type> GetAllScriptChildTypes<T>() where T : class =>
+		GetAllScriptChildTypes(typeof(T));
+	public static IEnumerable<Type> GetAllScriptChildTypes(Type type)
 	{
-		return TypeCache.GetTypesDerivedFrom<T>()
+		return TypeCache.GetTypesDerivedFrom(type)
 			.Where(t => !t.ContainsGenericParameters
 				&& !t.ContainsGenericParameters
 				&& !t.IsAbstract);

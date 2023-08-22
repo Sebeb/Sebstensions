@@ -19,11 +19,12 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 	[HideIf("isSingleton")]
 	public bool enabled = true;
 	private static readonly string[] systemFileWords =
-		{ "Singleton", "Scriptable Object", "Scriptable", "Manager" };
+		{ "Singleton", "Scriptable Object", "Scriptable" };
 
 	protected virtual bool autoMovable => true;
 
-	public virtual IEnumerable<string> GetCustomPathSuffixes() => new string[0];
+	public virtual IEnumerable<string> GetDefaultDirectory() =>
+		GetTypeDirectory(GetType(), typeof(ScriptableMonoObject));
 	public static IEnumerable<string> GetTypeDirectory(Type type, Type baseType)
 	{
 		// ScriptablesDatabase.Refresh();
@@ -32,12 +33,11 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 		baseTypes = baseTypes.Where(t => !t.IsInterface);
 		baseTypes = baseTypes.Reverse();
 		baseTypes = baseTypes.SkipWhile(t => t != baseType);
-		// if (ScriptablesDatabase.Get(type).Count() == 1)
-		// {
-		// 	baseTypes = baseTypes.SkipLast(1);
-		// }
 
-		if (!baseTypes.Any()) return new[] { "Resources" };
+		if (!baseTypes.Any()) return new string[0];
+
+		bool isSingleton = type.IsSubclassOfRawGeneric(typeof(SingletonScriptableObject<>));
+		if (isSingleton) baseTypes = baseTypes.SkipLast(1);
 
 		return
 			baseTypes.Select(t => t.GetNiceName()
@@ -47,14 +47,12 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 					.Trim()
 					.Pluralize(inputIsKnownToBeSingular: false))
 				.Where(s => !string.IsNullOrEmpty(s))
-				.Skip(1)
-				.Prepend("Resources");
+				.Skip(1);
 	}
 	public string GetDefaultPath()
 	{
-		IEnumerable<string> breadcrumbs = new[] { "Assets" }
-			.Concat(GetTypeDirectory(GetType(), typeof(ScriptableMonoObject))
-				.Concat(GetCustomPathSuffixes())).Concat(!enabled ? new[] { "Disabled" } : new string[0]);
+		IEnumerable<string> breadcrumbs = new[] { "Assets", "Resources" }
+			.Concat(GetDefaultDirectory()).Concat(!enabled ? new[] { "Disabled" } : new string[0]);
 
 		return breadcrumbs.Join("/");
 	}
@@ -97,14 +95,15 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 
 	}
 
-	public static ScriptableMonoObject CreateNew(Type type, string name = null)
+	public static ScriptableMonoObject CreateNew(Type type, string name = null,
+		OverwriteMode overwriteMode = OverwriteMode.Increment)
 	{
 		if (!(CreateInstance(type) is ScriptableMonoObject newSingleton))
 		{
 			Debug.LogError("Could not create new singleton of type " + type.GetNiceFullName());
 			return null;
 		}
-		return SaveExisting(newSingleton);
+		return SaveExisting(newSingleton, name, overwriteMode);
 	}
 	public enum OverwriteMode
 	{
@@ -137,8 +136,8 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 		{
 			AssetDatabase.CreateAsset(existingObject, assetPath);
 			AssetDatabase.SaveAssets();
-			createdAsset = AssetDatabase.LoadAssetAtPath<ScriptableMonoObject>(assetPath);
 		}
+		createdAsset = AssetDatabase.LoadAssetAtPath<ScriptableMonoObject>(assetPath);
 		Debug.Log(
 			string.Format("{0} {1} at {2}",
 				overwrite switch
