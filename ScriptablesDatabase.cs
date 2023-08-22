@@ -50,10 +50,12 @@ public class ScriptablesDatabase : SerializedScriptableObject
 	private Dictionary<Type, ScriptableMonoObject[]> typeScriptablesDic = new();
 
 
+	private static int lastFrameRefreshed;
 	public static bool TryRefresh()
 	{
-		//Update monoscripts listing if not previously updated, or if we are in editor and not playing
-		if (!(Application.isEditor && !Application.isPlaying)
+		//Update monoscripts listing if not previously updated, or if we are in editor and not playing (max once per frame)
+		if (Time.frameCount == lastFrameRefreshed
+		    || !(Application.isEditor && !Application.isPlaying)
 		    && _i.scriptablesIByType != null
 		    && _i.scriptablesIByType.Any())
 			return false;
@@ -68,15 +70,15 @@ public class ScriptablesDatabase : SerializedScriptableObject
 	public void OnPreprocessBuild(BuildTarget target, string path) => Refresh();
 #endif
 
-	[MenuItem("Tools/Scriptable Objects/Refresh Database"), InitializeOnLoadMethod]
-	private static void _Refresh() => Refresh(false);
+	[MenuItem("Tools/Scriptable Objects/Refresh Database")]
+	private static void MenuRefresh() => Refresh(false);
+
+
+	[ExecuteOnReload, RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded),
+	 InitializeOnLoadMethod]
+	private static void AutoRefresh() => Refresh(true);
 
 	[Button]
-	public static void ManualRefresh() => Refresh(true);
-
-	[ExecuteOnReload, RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
-	public static void Refresh() => Refresh(true);
-
 	public static void Refresh(bool silent = true)
 	{
 		IEnumerable<Type> cachableType = AppDomain.CurrentDomain.GetAssemblies()
@@ -85,7 +87,7 @@ public class ScriptablesDatabase : SerializedScriptableObject
 				&& t.GetInheritanceDistance(typeof(ICacheable)) > 0);
 
 		cachableType =
-			cachableType.Concat<Type>(Reflection.GetAllSingletonScriptChildrenTypes<ScriptableMonoObject>())
+			cachableType.Concat(Reflection.GetAllSingletonScriptChildrenTypes<ScriptableMonoObject>())
 				.Distinct();
 
 		_i.scriptablesIByType.Clear();
@@ -106,12 +108,11 @@ public class ScriptablesDatabase : SerializedScriptableObject
 			_i.scriptablesIByType[row.k.Key.Name] = row.i;
 		}
 
+		lastFrameRefreshed = Time.frameCount;
+
 		if (silent) return;
 
-		Debug.Log(string.Join("\n",
-			Enumerable.Select(_i.typeScriptablesDic,
-				kvp =>
-					$"({kvp.Value.Length}) {kvp.Key}:  {string.Join(", ", Enumerable.Select<ScriptableMonoObject, string>(kvp.Value, s => s.name))}")));
+		Debug.Log(Enumerable.Select(_i.typeScriptablesDic, kvp => $"{kvp.Key} ({kvp.Value.Length})").Join());
 	}
 
 

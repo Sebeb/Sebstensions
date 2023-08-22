@@ -39,12 +39,7 @@ public class ScriptHelper : MonoBehaviour
         return ((MonoBehaviour)mono).StartCoroutine(routine);
     }
     public static void StopCoroutine(Coroutine routine) => ((MonoBehaviour)mono).StopCoroutine(routine);
-    private static bool fakeStart;
-    [
-    #if UNITY_EDITOR
-        InitializeOnLoadMethod,
-    #endif
-        RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+
     public static Coroutine WaitThenExecute(float time, Action action,
         Action<float, float> timeOut = null)
     {
@@ -74,9 +69,15 @@ public class ScriptHelper : MonoBehaviour
         }
     }
 
+
+    private static bool fakeStart;
+    [
+    #if UNITY_EDITOR
+        InitializeOnLoadMethod,
+    #endif
+        RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     public static ScriptHelper SetInstance()
     {
-        Debug.Log("Initing");
         if (_instance != null) { return _instance; }
 
         GameObject runnerObj = GameObject.Find("Script Helper");

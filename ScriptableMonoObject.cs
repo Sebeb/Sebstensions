@@ -23,7 +23,7 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 
 	protected virtual bool autoMovable => true;
 
-	public virtual IEnumerable<string> GetCustomPathSuffixes() => default;
+	public virtual IEnumerable<string> GetCustomPathSuffixes() => new string[0];
 	public static IEnumerable<string> GetTypeDirectory(Type type, Type baseType)
 	{
 		// ScriptablesDatabase.Refresh();

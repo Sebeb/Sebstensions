@@ -1142,7 +1142,7 @@ public static class Seb
 	public static float Range(this IEnumerable<float> input) => input.Max() - input.Min();
 
 	/// <returns>True if item was removed</returns>
-	public static bool TryRemove<T>(this List<T> list, T item)
+	public static bool TryRemove<T>(this IList<T> list, T item)
 	{
 		if (list.Contains(item))
 		{
