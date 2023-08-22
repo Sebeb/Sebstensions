@@ -1,29 +1,32 @@
 ﻿using Sirenix.OdinInspector.Editor;
 using Sirenix.Utilities.Editor;
 using UnityEditor;
+using UnityEngine;
 
 
 public class GameManager : OdinMenuEditorWindow
 {
-	[MenuItem("Tools/Game Manager", priority = -999999)]
+	[MenuItem("Tools/Game Manager %&g", priority = -999999)]
 	private static void OpenEditor()
 	{
-		GameManager window = GetWindow<GameManager>("Game Manager");
-		window.titleContent = new UnityEngine.GUIContent("Game Manager", EditorIcons.SettingsCog.Active);
+		window = GetWindow<GameManager>("Game Manager", true);
+		window.minSize = new Vector2(300, 300);
+		window.titleContent = new GUIContent("Game Manager", EditorIcons.SettingsCog.Active);
 	}
-	
-
+	private static GameManager window;
+	private static OdinMenuTree tree;
 	protected override OdinMenuTree BuildMenuTree()
 	{
-		OdinMenuTree tree = new(false,
+		tree = new OdinMenuTree(false,
 			config: new OdinMenuTreeDrawingConfig
 			{
-				DefaultMenuStyle = new OdinMenuStyle
-					{ Borders = true, BorderPadding = 200, BorderAlpha = 1 }
+				SelectMenuItemsOnMouseDown = true,
+				DefaultMenuStyle = OdinMenuStyle.TreeViewStyle
 			});
 
 		//Recursively add Scriptable Objects from the Assets/Data folder, ensuring that the path is correct
 		tree.AddAllAssetsAtPath("", "Assets/Resources/Managers", typeof(ScriptableMonoObject), true, false);
+		tree.SortMenuItemsByName();
 
 		return tree;
 	}
