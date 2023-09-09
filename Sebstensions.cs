@@ -593,6 +593,14 @@ public static class Seb
 
 #region String
 
+	public static string RemoveFromEnd(this string input, string toRemove)
+	{
+		if (input.EndsWith(toRemove))
+		{
+			return input.Remove(input.Length - toRemove.Length);
+		}
+		else return input;
+	}
 	public static string TryRemove(this string input, int removeAt, bool appendEllipsis = false)
 	{
 		if (removeAt > 0 && removeAt < input.Length)
@@ -920,6 +928,35 @@ public static class Seb
 #endregion
 
 #region Collections
+
+	//https://stackoverflow.com/questions/419019/split-list-into-sublists-with-linq
+	public static IEnumerable<IEnumerable<T>> Chunks<T>(this IEnumerable<T> enumerable,
+		int chunkSize)
+	{
+		if (chunkSize < 1) throw new ArgumentException("chunkSize must be positive");
+
+		using (var e = enumerable.GetEnumerator())
+			while (e.MoveNext())
+			{
+				var remaining = chunkSize; // elements remaining in the current chunk
+				var innerMoveNext = new Func<bool>(() => --remaining > 0 && e.MoveNext());
+
+				yield return e.GetChunk(innerMoveNext);
+				while (innerMoveNext())
+				{ /* discard elements skipped by inner iterator */
+				}
+			}
+	}
+
+	private static IEnumerable<T> GetChunk<T>(this IEnumerator<T> e,
+		Func<bool> innerMoveNext)
+	{
+		do yield return e.Current;
+		while (innerMoveNext());
+	}
+
+	public static IEnumerable<T2> TryGetValues<T1, T2>(this IDictionary<T1, T2> dict, IEnumerable<T1> keys) =>
+		dict.Where(pair => keys.Contains(pair.Key)).Select(pair => pair.Value);
 
 	[Serializable]
 	public class ObservedList<T> : IList, IList<T>
@@ -1470,6 +1507,9 @@ public static class Seb
 		return table;
 	}
 
+	public static IDictionary<T2, T1> Inverse<T1, T2>(this IDictionary<T1, T2> dic) =>
+		dic.ToDictionary(x => x.Value, x => x.Key);
+
 #endregion
 
 #region Comparison
@@ -1719,8 +1759,15 @@ public static class Seb
 
 #region Maths
 
-	public static string ToString(this float value, int decimals) =>
-		value.ToString($"F{decimals}").TrimEnd('0').TrimEnd('.');
+	public static string ToString(this float value, int decimals)
+	{
+		string s = value.ToString($"F{decimals}");
+		if (s.Contains('.'))
+		{
+			return s.TrimEnd('0').TrimEnd('.');
+		}
+		else return s;
+	}
 	public static float SetSign(this float value, float sign) => Mathf.Abs(value) * Mathf.Sign(sign);
 	public static float SetSign(this float value, bool positive) =>
 		positive ? Mathf.Abs(value) : -Mathf.Abs(value);
@@ -2900,9 +2947,11 @@ public static class Lines
 
 public static class Reflection
 {
-	public static IEnumerable<Type> GetAllScriptChildTypes<T>() where T : class
+	public static IEnumerable<Type> GetAllScriptChildTypes<T>() where T : class =>
+		GetAllScriptChildTypes(typeof(T));
+	public static IEnumerable<Type> GetAllScriptChildTypes(Type type)
 	{
-		return TypeCache.GetTypesDerivedFrom<T>()
+		return TypeCache.GetTypesDerivedFrom(type)
 			.Where(t => !t.ContainsGenericParameters
 				&& !t.ContainsGenericParameters
 				&& !t.IsAbstract);

@@ -13,8 +13,9 @@ public abstract class CustomMono : MonoBehaviour
 {
 #if UNITY_EDITOR
 	[FoldoutGroup("Settings"), ShowInInspector, LabelText("Settings"), ShowIf("GetSettings"),
-	 InlineEditor(InlineEditorObjectFieldModes.CompletelyHidden), OnInspectorInit("SetSettings")]
-	private SettingsScriptable serializedSettings;
+	 OnInspectorInit("SetSettings"),
+	 InlineEditor(InlineEditorObjectFieldModes.CompletelyHidden, DrawHeader = true)]
+	private ScriptableMonoObject serializedSettings;
 
 	private void SetSettings()
 	{
@@ -24,7 +25,7 @@ public abstract class CustomMono : MonoBehaviour
 		}
 	}
 
-	private SettingsScriptable GetSettings() => Settings.GetBox(GetType(), targetClassType: true, silent: true);
+	private ScriptableMonoObject GetSettings() => Managers.GetAssociated(GetType(), silent: true);
 #endif
 	protected static bool quitting => ScriptHelper.quitting;
 	[ClearOnReload]
@@ -111,14 +112,14 @@ public static class CustomMonoHelper
 				.SelectMany(t => t.GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static))
 				.Where(m => m.Name == "ClassAwake");
 
-		
+
 		foreach (CustomMono customMono in Object.FindObjectsOfType<CustomMono>(true))
 		{
 			customMono.AssignDelegates();
 		}
 
 		OnAssign?.Invoke();
-		
+
 		methods.ForEach(m => m.Invoke(null, null));
 	}
 
