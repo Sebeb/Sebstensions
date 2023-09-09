@@ -138,8 +138,10 @@ public static class Seb
 	public static Vector2 MoveY(this Vector2 input, float value) => new(input.x, input.y + value);
 	public static Vector2 ScaleX(this Vector2 input, float value) => new(input.x * value, input.y);
 	public static Vector2 ScaleY(this Vector2 input, float value) => new(input.x, input.y * value);
-	public static Vector2 CapMax(this Vector2 input, float value) => new(input.x.CapMax(value), input.y.CapMax(value));
-	public static Vector2 CapMin(this Vector2 input, float value) => new(input.x.CapMin(value), input.y.CapMin(value));
+	public static Vector2 CapMax(this Vector2 input, float value) =>
+		new(input.x.CapMax(value), input.y.CapMax(value));
+	public static Vector2 CapMin(this Vector2 input, float value) =>
+		new(input.x.CapMin(value), input.y.CapMin(value));
 
 	public static Vector2 CapMin(this Vector2 input, float xMin, float yMin) =>
 		new(input.x.CapMin(xMin), input.y.CapMin(yMin));
@@ -163,11 +165,13 @@ public static class Seb
 	public static Vector3 ScaleX(this Vector3 input, float value) => new(input.x * value, input.y, input.z);
 	public static Vector3 ScaleY(this Vector3 input, float value) => new(input.x, input.y * value, input.z);
 	public static Vector3 ScaleZ(this Vector3 input, float value) => new(input.x, input.y, input.z * value);
-	public static Vector3 ScaleXY(this Vector3 input, float value) => new(input.x * value, input.y * value, input.z);
+	public static Vector3 ScaleXY(this Vector3 input, float value) =>
+		new(input.x * value, input.y * value, input.z);
 	public static Vector3 ScaleX(this Vector3Int input, float value) => new(input.x * value, input.y, input.z);
 	public static Vector3 ScaleY(this Vector3Int input, float value) => new(input.x, input.y * value, input.z);
 	public static Vector3 ScaleZ(this Vector3Int input, float value) => new(input.x, input.y, input.z * value);
-	public static Vector3 ScaleXY(this Vector3Int input, float value) => new(input.x * value, input.y * value, input.z);
+	public static Vector3 ScaleXY(this Vector3Int input, float value) =>
+		new(input.x * value, input.y * value, input.z);
 
 	public static Vector3 CapMax(this Vector3 input, float value) =>
 		new(input.x.CapMax(value), input.y.CapMax(value), input.z.CapMax(value));
@@ -222,14 +226,22 @@ public static class Seb
 	public static Vector4 SetY(this Vector4 input, float value) => new(input.x, value, input.z, input.w);
 	public static Vector4 SetZ(this Vector4 input, float value) => new(input.x, input.y, value, input.w);
 	public static Vector4 SetW(this Vector4 input, float value) => new(input.x, input.y, input.z, value);
-	public static Vector4 MoveX(this Vector4 input, float value) => new(input.x + value, input.y, input.z, input.w);
-	public static Vector4 MoveY(this Vector4 input, float value) => new(input.x, input.y + value, input.z, input.w);
-	public static Vector4 MoveZ(this Vector4 input, float value) => new(input.x, input.y, input.z + value, input.w);
-	public static Vector4 MoveW(this Vector4 input, float value) => new(input.x, input.y, input.z, input.w + value);
-	public static Vector4 ScaleX(this Vector4 input, float value) => new(input.x * value, input.y, input.z, input.w);
-	public static Vector4 ScaleY(this Vector4 input, float value) => new(input.x, input.y * value, input.z, input.w);
-	public static Vector4 ScaleZ(this Vector4 input, float value) => new(input.x, input.y, input.z * value, input.w);
-	public static Vector4 ScaleW(this Vector4 input, float value) => new(input.x, input.y, input.z, input.w * value);
+	public static Vector4 MoveX(this Vector4 input, float value) =>
+		new(input.x + value, input.y, input.z, input.w);
+	public static Vector4 MoveY(this Vector4 input, float value) =>
+		new(input.x, input.y + value, input.z, input.w);
+	public static Vector4 MoveZ(this Vector4 input, float value) =>
+		new(input.x, input.y, input.z + value, input.w);
+	public static Vector4 MoveW(this Vector4 input, float value) =>
+		new(input.x, input.y, input.z, input.w + value);
+	public static Vector4 ScaleX(this Vector4 input, float value) =>
+		new(input.x * value, input.y, input.z, input.w);
+	public static Vector4 ScaleY(this Vector4 input, float value) =>
+		new(input.x, input.y * value, input.z, input.w);
+	public static Vector4 ScaleZ(this Vector4 input, float value) =>
+		new(input.x, input.y, input.z * value, input.w);
+	public static Vector4 ScaleW(this Vector4 input, float value) =>
+		new(input.x, input.y, input.z, input.w * value);
 
 	public static Vector4 ScaleXY(this Vector4 input, float value) =>
 		new(input.x * value, input.y * value, input.z, input.w);
@@ -345,9 +357,9 @@ public static class Seb
 	public static Vector3 GetMeanVector(this IEnumerable<Vector3> vectors) =>
 		vectors.Aggregate(Vector3.zero, (current, vector) => current + vector) / vectors.Count();
 
-	#endregion
+#endregion
 
-	#region Rect Transform
+#region Rect Transform
 
 	public static Bounds CalculateBounds(this RectTransform rectT, Space space = Space.World)
 	{
@@ -370,9 +382,12 @@ public static class Seb
 		return bounds;
 	}
 
-	#endregion
+	public static void SetHeight(this RectTransform rectT, float height) =>
+		rectT.sizeDelta = rectT.sizeDelta.SetY(height);
 
-	#region MeshRenderer
+#endregion
+
+#region MeshRenderer
 
 	public static Bounds CalculateMeshBounds(this GameObject obj, Space space = Space.World)
 	{
@@ -403,9 +418,9 @@ public static class Seb
 		return ret;
 	}
 
-	#endregion
+#endregion
 
-	#region Transform
+#region Transform
 
 	public static void Reset(this Transform input, Space space = Space.Self)
 	{
@@ -574,9 +589,9 @@ public static class Seb
 			query(c) && (includeDisabled || c.gameObject.activeInHierarchy) ? c
 				: c.FirstChildOrDefault(query, includeDisabled)).WhereNotNull();
 
-	#endregion
+#endregion
 
-	#region String
+#region String
 
 	public static string TryRemove(this string input, int removeAt, bool appendEllipsis = false)
 	{
@@ -773,7 +788,8 @@ public static class Seb
 		return breakPoint;
 	}
 
-	public static string StripPunctuation(this string input) => new(input.Where(c => !char.IsPunctuation(c)).ToArray());
+	public static string StripPunctuation(this string input) =>
+		new(input.Where(c => !char.IsPunctuation(c)).ToArray());
 
 	public static string CombinePaths(this string path1, params string[] paths)
 	{
@@ -851,9 +867,9 @@ public static class Seb
 	public static string Join(this IEnumerable<string> input, string separator = ", ") =>
 		string.Join(separator, input);
 
-	#endregion
+#endregion
 
-	#region Colour
+#region Colour
 
 	public static Color MoveA(this Color input, float a) => input.SetA(Mathf.Clamp01(input.a + a));
 
@@ -901,16 +917,17 @@ public static class Seb
 
 	public static Color GetRandom(this Gradient g) => g.Evaluate(Random.value);
 
-	#endregion
+#endregion
 
-	#region Collections
+#region Collections
 
 	[Serializable]
 	public class ObservedList<T> : IList, IList<T>
 	{
 		public event Action<T> OnAdd, OnRemove;
 		public event Action<List<T>> OnChange;
-		[SerializeReference, SubclassSelector, InlineProperty, ListDrawerSettings(ListElementLabelName = "ToString")]
+		[SerializeReference, SubclassSelector, InlineProperty,
+		 ListDrawerSettings(ListElementLabelName = "ToString")]
 		private List<T> _value = new();
 		private HashSet<IList<T>> subbedLists = new();
 		public int Count => _value.Count;
@@ -1098,7 +1115,7 @@ public static class Seb
 		IEnumerator IEnumerable.GetEnumerator() { return GetEnumerator(); }
 		public List<T> GetRange(int iStart, int iEnd) => _value.GetRange(iStart, iEnd);
 	}
-	
+
 	//https://stackoverflow.com/questions/5248254/in-linq-select-all-values-of-property-x-where-x-null
 	public static IEnumerable<T> WhereNotNull<T>(this IEnumerable<T> sequence)
 	{
@@ -1125,7 +1142,7 @@ public static class Seb
 	public static float Range(this IEnumerable<float> input) => input.Max() - input.Min();
 
 	/// <returns>True if item was removed</returns>
-	public static bool TryRemove<T>(this List<T> list, T item)
+	public static bool TryRemove<T>(this IList<T> list, T item)
 	{
 		if (list.Contains(item))
 		{
@@ -1145,7 +1162,7 @@ public static class Seb
 		}
 		else return false;
 	}
-	
+
 	private static System.Random _random = new();
 
 	public static T GetWeightedRandom<T>(this IEnumerable<T> itemsEnumerable,
@@ -1350,7 +1367,7 @@ public static class Seb
 	public static IEnumerable<(T item, int index)> WithIndex<T>(this IEnumerable<T> source) =>
 		source.Select((item, index) => (item, index));
 
-	
+
 	//https://stackoverflow.com/questions/12172162/how-to-insert-item-into-list-in-order
 	public static void SortedAdd<T>(this List<T> @this, T item) where T : IComparable<T>
 	{
@@ -1453,9 +1470,9 @@ public static class Seb
 		return table;
 	}
 
-	#endregion
+#endregion
 
-	#region Comparison
+#region Comparison
 
 	public struct OffsetEqualityComparer : IEqualityComparer<int>
 	{
@@ -1466,9 +1483,9 @@ public static class Seb
 		public int GetHashCode(int obj) => 0;
 	}
 
-	#endregion
+#endregion
 
-	#region GameObject
+#region GameObject
 
 	public static GameObject GetOrMakeChild(this GameObject go, string name, bool hidden = false) =>
 		(go == null ? null : go.transform).GetOrMakeChild(name).gameObject;
@@ -1527,9 +1544,9 @@ public static class Seb
 		return mask == (mask | (1 << layer));
 	}
 
-	#endregion
+#endregion
 
-	#region Physics
+#region Physics
 
 	/// <summary>
 	/// Sets a joint's targetRotation to match a given local rotation.
@@ -1636,8 +1653,9 @@ public static class Seb
 		}
 
 	}
-	
+
 	public static Vector2Int Size(this RenderTexture rt) => new(rt.width, rt.height);
+
 #endregion
 
 #region Audio
@@ -1662,7 +1680,7 @@ public static class Seb
 
 #endregion
 
-	#region Logic
+#region Logic
 
 	public static bool LiesBetween(this int num, int a, int b, bool inclusiveMax = false)
 	{
@@ -1678,8 +1696,8 @@ public static class Seb
 			: a <= num && num < b;
 	}
 
-	#endregion
-		
+#endregion
+
 #region Angles
 
 	public static Quaternion ClampWithinEuler(this Quaternion angleA, Quaternion angleB,
@@ -1699,8 +1717,7 @@ public static class Seb
 
 #endregion
 
-
-	#region Maths
+#region Maths
 
 	public static string ToString(this float value, int decimals) =>
 		value.ToString($"F{decimals}").TrimEnd('0').TrimEnd('.');
@@ -1734,9 +1751,9 @@ public static class Seb
 	public static int CapMax(this int i, int max) => Mathf.Min(i, max);
 	public static int CapMin(this int i, int min) => Mathf.Max(i, min);
 
-	#endregion
+#endregion
 
-	#region Movement
+#region Movement
 
 	/// <returns>-1 or 1 with 50:50 chance</returns>
 	public static int RandomDirection() => (Random.Range(0, 2) == 1).AsDirectionalInt();
@@ -1777,9 +1794,9 @@ public static class Seb
 		}
 	}
 
-	#endregion
+#endregion
 
-	#region UI
+#region UI
 
 	public static Vector2 SnapScrollToChild(this ScrollRect instance, RectTransform child)
 	{
@@ -1793,9 +1810,9 @@ public static class Seb
 		return result;
 	}
 
-	#endregion
+#endregion
 
-	#region Files
+#region Files
 
 	/// <summary>
 	/// Returns a version of the filepath which, if necessary, contains a number to ensure it is unique (e.g. untitlefile3.txt)
@@ -1867,9 +1884,9 @@ public static class Seb
 	public static string CleanPathString(this string path) =>
 		string.Concat(path.Select(c => !Path.GetInvalidPathChars().Contains(c) ? c : '-'));
 
-	#endregion
+#endregion
 
-	#region Types
+#region Types
 
 	public static IEnumerable<Type> GetInheritanceHierarchy(this Type type)
 	{
@@ -1908,9 +1925,9 @@ public static class Seb
 // 	.Where(type => type.IsSubclassOf(typeof(T)))
 // 	.Select(type => Activator.CreateInstance(type) as T);
 
-	#endregion
+#endregion
 
-	#region Enums
+#region Enums
 
 	public static IEnumerable<T> GetFlags<T>(this T input) where T : Enum => Enum.GetValues(input.GetType())
 		.Cast<Enum>().Where(value => input.HasFlag(value)).Cast<T>();
@@ -1920,13 +1937,13 @@ public static class Seb
 		return Enum.GetValues(typeof(T)).Cast<T>().ToArray();
 	}
 
-	#endregion
+#endregion
 
-	#region Coroutines
+#region Coroutines
 
 	public static void WaitForFrames(int frames, Action action)
 	{
-		ScriptHelper.DoCoroutine(WaitForFramesCoroutine(frames, action));
+		ScriptHelper.StartCoroutine(WaitForFramesCoroutine(frames, action));
 
 		IEnumerator WaitForFramesCoroutine(int frames, Action action)
 		{
@@ -1936,9 +1953,9 @@ public static class Seb
 		}
 	}
 
-	#endregion
-		
-		#region Scripts
+#endregion
+
+#region Scripts
 
 #if UNITY_EDITOR
 	public static class FindMissingScriptsRecursively
@@ -2000,6 +2017,51 @@ public static class Seb
 				compCount += count;
 				goCount++;
 			}
+		}
+	}
+#endif
+
+#endregion
+
+#region Editor Tools
+
+#if UNITY_EDITOR
+	public static T GetEditorSelectedComponent<T>() where T : Component =>
+		Selection.GetFiltered<T>(SelectionMode.Editable).FirstOrDefault();
+
+	private static Dictionary<Type, Component> lastSelected = new();
+
+	[InitializeOnLoadMethod, InitializeOnEnterPlayMode]
+	private static void OnStartEditor()
+	{
+		Selection.selectionChanged += OnSelectionChange;
+		OnSelectionChange();
+	}
+
+	private static void OnSelectionChange()
+	{
+		foreach (Type type in lastSelected.Keys.ToList())
+		{
+			if (Selection.GetFiltered(type, SelectionMode.Editable).FirstOrDefault() is Component comp
+			    && comp.GetType() == type)
+			{
+				lastSelected[type] = comp;
+			}
+		}
+	}
+
+	public static void RequestSelectionTracking(Type type) => lastSelected.TryAdd(type, null);
+
+	public static T GetLastSelected<T>() where T : Component
+	{
+		if (lastSelected.TryGetValue(typeof(T), out Component comp))
+		{
+			return comp as T;
+		}
+		else
+		{
+			lastSelected.Add(typeof(T), null);
+			return null;
 		}
 	}
 #endif
@@ -2090,7 +2152,7 @@ public class Timer
 		if (!autoUpdate) return;
 
 		state = State.Running;
-		ScriptHelper.DoCoroutine(CoroAutoUpdate());
+		ScriptHelper.StartCoroutine(CoroAutoUpdate());
 	}
 
 	private IEnumerator CoroAutoUpdate()
@@ -2282,9 +2344,10 @@ public class SDictionary<TKey, TValue> : Dictionary<TKey, TValue>, ISerializatio
 
 	public SDictionary(IEnumerable<KeyValuePair<TKey, TValue>> collection) : base(collection) {}
 
-	public SDictionary(IEnumerable<KeyValuePair<TKey, TValue>> collection, IEqualityComparer<TKey> comparer) : base(
-		collection,
-		comparer) {}
+	public SDictionary(IEnumerable<KeyValuePair<TKey, TValue>> collection, IEqualityComparer<TKey> comparer) :
+		base(
+			collection,
+			comparer) {}
 
 	void ISerializationCallbackReceiver.OnAfterDeserialize()
 	{
@@ -2672,7 +2735,7 @@ public class Map<TKey, TValue> : SDictionary<TKey, TValue>
 }
 
 [Serializable]
-public struct Transformation
+public struct Translation
 {
 	public Vector3 position;
 	public Quaternion rotation;
@@ -2683,50 +2746,52 @@ public struct Transformation
 	}
 	public Vector3 scale;
 
-	public Transformation(Transform transform, Space space = Space.Self)
+	public Translation(Transform transform, Space space = Space.Self)
 	{
 		position = space == Space.World ? transform.position : transform.localPosition;
 		rotation = space == Space.World ? transform.rotation : transform.localRotation;
 		scale = space == Space.World ? transform.lossyScale : transform.localScale;
 	}
 
-	public Transformation(Vector3 position, Quaternion rotation, Vector3 scale)
+	public Translation(Vector3 position, Quaternion rotation, Vector3 scale)
 	{
 		this.position = position;
 		this.rotation = rotation;
 		this.scale = scale;
 	}
 
-	public Transformation(Vector3 position, Quaternion rotation)
+	public Translation(Vector3 position, Quaternion rotation)
 	{
 		this.position = position;
 		this.rotation = rotation;
 		scale = Vector3.one;
 	}
 
-	public Transformation(Vector3 position)
+	public Translation(Vector3 position)
 	{
 		this.position = position;
 		rotation = Quaternion.identity;
 		scale = Vector3.one;
 	}
 
-	public Transformation(Quaternion rotation)
+	public Translation(Quaternion rotation)
 	{
 		position = Vector3.zero;
 		this.rotation = rotation;
 		scale = Vector3.one;
 	}
 
-	public static Transformation operator +(Transformation a, Transformation b) =>
+	public static Translation operator +(Translation a, Translation b) =>
 		new(a.position + b.position,
 			a.rotation * b.rotation,
 			a.scale.Multiply(b.scale));
+
+	public static implicit operator Translation(Transform t) => new(t);
 }
 
 public static class TransformStructOverride
 {
-	public static void Set(this Transform t, Transformation @struct, Space space = Space.Self)
+	public static void Set(this Transform t, Translation @struct, Space space = Space.Self)
 	{
 		if (space == Space.Self)
 		{
@@ -2742,7 +2807,7 @@ public static class TransformStructOverride
 		}
 	}
 
-	public static void Apply(this Transform t, Transformation @struct, Space space = Space.Self)
+	public static void Apply(this Transform t, Translation @struct, Space space = Space.Self)
 	{
 		if (space == Space.Self)
 		{
@@ -2835,12 +2900,30 @@ public static class Lines
 
 public static class Reflection
 {
-	public static IEnumerable<Type> GetAllScriptChildren<T>() where T : class
+	public static IEnumerable<Type> GetAllScriptChildTypes<T>() where T : class
 	{
 		return TypeCache.GetTypesDerivedFrom<T>()
 			.Where(t => !t.ContainsGenericParameters
 				&& !t.ContainsGenericParameters
 				&& !t.IsAbstract);
+	}
+
+	public static IEnumerable<T> ConstructTypes<T>(this IEnumerable<Type> baseTypes)
+		where T : class
+		=> ConstructTypes<T>(baseTypes, Type.EmptyTypes);
+	public static IEnumerable<T> ConstructTypes<T>(this IEnumerable<Type> baseTypes,
+		params Type[] siginatureTypes) where T : class
+		=> baseTypes
+			.Select(t => t.ConstructType<T>(siginatureTypes))
+			.WhereNotNull();
+
+	public static T ConstructType<T>(this Type baseType, params Type[] siginatureTypes) where T : class
+	{
+		if (baseType.GetConstructor(siginatureTypes) is {} constructor)
+		{
+			return constructor.Invoke(siginatureTypes) as T;
+		}
+		else return null;
 	}
 
 	public static IEnumerable<Type> GetAllSingletonScriptChildrenTypes<T>() where T : class
@@ -2855,6 +2938,28 @@ public static class Reflection
 			.Where(p => p.Item2.Any(t => t.BaseType is { IsConstructedGenericType: true }
 				&& t.BaseType.GenericTypeArguments.Contains(t)))
 			.Select(p => p.Item1);
+	}
+
+	/// <summary>
+	/// Alternative version of <see cref="Type.IsSubclassOf"/> that supports raw generic types (generic types without
+	/// any type parameters).
+	/// </summary>
+	/// <param name="baseType">The base type class for which the check is made.</param>
+	/// <param name="toCheck">To type to determine for whether it derives from <paramref name="baseType"/>.</param>
+	public static bool IsSubclassOfRawGeneric(this Type toCheck, Type baseType)
+	{
+		while (toCheck != typeof(object))
+		{
+			Type cur = toCheck.IsGenericType ? toCheck.GetGenericTypeDefinition() : toCheck;
+			if (baseType == cur)
+			{
+				return true;
+			}
+
+			toCheck = toCheck.BaseType;
+		}
+
+		return false;
 	}
 }
 

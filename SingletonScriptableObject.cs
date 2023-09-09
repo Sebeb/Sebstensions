@@ -25,12 +25,9 @@ public abstract class SingletonScriptableObject<T> : ScriptableMonoObject, ICach
 	{
 		// if (_instance != null) { return _instance; }
 
-		T[] instances = Resources.LoadAll<T>("")
-			#if UNITY_EDITOR
-				.Where(i => AssetDatabase.GetAssetPath(i) != null).ToArray()
-		#endif
-			;
-		if (instances.Length == 0)
+		IEnumerable<T> instances = ScriptablesDatabase.Get<T>();
+		
+		if (!instances.Any())
 		{
 		#if UNITY_EDITOR
 			_instance = CreateInstance<T>();
@@ -44,18 +41,18 @@ public abstract class SingletonScriptableObject<T> : ScriptableMonoObject, ICach
 		}
 		else
 		{
-			if (instances.Length > 1)
+			if (instances.Count() > 1)
 			{
 			#if UNITY_EDITOR
 				Debug.LogError("Multiple "
 					+ _i.GetType()
 					+ " detected. Using "
-					+ AssetDatabase.GetAssetPath(instances[0])
+					+ AssetDatabase.GetAssetPath(instances.FirstOrDefault())
 					+ ". Consider destroying imposters.");
 			#endif
 			}
 
-			_instance = instances[0];
+			_instance = instances.FirstOrDefault();
 		}
 
 		return _instance;

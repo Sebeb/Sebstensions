@@ -19,7 +19,7 @@ public class Settings
 	{
 		PopulateDic();
 		bool hasChanged = false;
-		IEnumerable<Type> settingTypes = Reflection.GetAllScriptChildren<Settings>().Except(settingTypeDic.Keys);
+		IEnumerable<Type> settingTypes = Reflection.GetAllScriptChildTypes<Settings>().Except(settingTypeDic.Keys);
 		foreach (Type newType in settingTypes)
 		{
 			SettingsScriptable scriptable =
