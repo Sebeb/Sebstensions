@@ -11,7 +11,7 @@ using Humanizer;
 using Sirenix.OdinInspector;
 
 
-public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerializationCallbackReceiver
+public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISerializationCallbackReceiver
 {
 	[ShowInInlineEditors]
 	public new string name;
@@ -109,6 +109,8 @@ public class ScriptableMonoObject : ScriptableObject, ICacheable, ISerialization
 	{
 		Overwrite, Increment, Ignore
 	}
+	public void Save(string name = null, OverwriteMode overwriteMode = OverwriteMode.Increment) =>
+		SaveExisting(this, name, overwriteMode);
 	public static ScriptableMonoObject SaveExisting(ScriptableMonoObject existingObject, string name = null,
 		OverwriteMode overwriteMode = OverwriteMode.Increment)
 	{

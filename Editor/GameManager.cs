@@ -13,6 +13,16 @@ public class GameManager : OdinMenuEditorWindow
 		window.minSize = new Vector2(300, 300);
 		window.titleContent = new GUIContent("Game Manager", EditorIcons.SettingsCog.Active);
 	}
+
+	protected override void DrawEditors()
+	{
+		base.DrawEditors();
+		if (window != null)
+		{
+			window.titleContent = new GUIContent("Game Manager", EditorIcons.SettingsCog.Active);
+		}
+	}
+
 	private static GameManager window;
 	private static OdinMenuTree tree;
 	protected override OdinMenuTree BuildMenuTree()
@@ -20,6 +30,7 @@ public class GameManager : OdinMenuEditorWindow
 		tree = new OdinMenuTree(false,
 			config: new OdinMenuTreeDrawingConfig
 			{
+				AutoHandleKeyboardNavigation = false,
 				SelectMenuItemsOnMouseDown = true,
 				DefaultMenuStyle = OdinMenuStyle.TreeViewStyle
 			});
