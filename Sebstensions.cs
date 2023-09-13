@@ -357,6 +357,15 @@ public static class Seb
 	public static Vector3 GetMeanVector(this IEnumerable<Vector3> vectors) =>
 		vectors.Aggregate(Vector3.zero, (current, vector) => current + vector) / vectors.Count();
 
+	public static Vector2 Slerp(this Vector2 a, Vector2 b, float t)
+	{
+		float dot = Vector2.Dot(a, b);
+		dot = Mathf.Clamp(dot, -1f, 1f);
+		float theta = Mathf.Acos(dot) * t;
+		Vector2 relativeVec = b - a * dot;
+		relativeVec.Normalize();
+		return (a * Mathf.Cos(theta)) + relativeVec * Mathf.Sin(theta);
+	}
 #endregion
 
 #region Rect Transform
