@@ -5,7 +5,7 @@ using UnityEngine;
 
 public abstract class SingletonMonoBehaviour<T> : CustomMono where T : SingletonMonoBehaviour<T>
 {
-	protected bool AssertSingleton(bool thisInstance)
+	protected bool AssertSingleton(bool thisInstance, bool destroyOthers = true)
 	{
 		List<SingletonMonoBehaviour<T>> instances =
 			new List<SingletonMonoBehaviour<T>>(FindObjectsOfType<T>()
@@ -24,13 +24,13 @@ public abstract class SingletonMonoBehaviour<T> : CustomMono where T : Singleton
 				_instance = this as T;
 				foreach (SingletonMonoBehaviour<T> instance in instances)
 				{
-					DestroyImmediate(instance.gameObject);
+					instance.gameObject.Destroy();
 				}
 				return true;
 			}
 			else
 			{
-				DestroyImmediate(gameObject);
+				gameObject.Destroy();
 				return false;
 			}
 		}
@@ -66,7 +66,7 @@ public abstract class SingletonMonoBehaviour<T> : CustomMono where T : Singleton
 		return _instance;
 	}
 
-	public static T _i => _instance ??= GetInstance();
+	public static T _i => _instance ??= GetInstance(true);
 	private static T _instance;
 }
 
