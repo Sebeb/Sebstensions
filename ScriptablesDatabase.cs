@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using Sirenix.OdinInspector;
 using Sirenix.Utilities;
+#if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Callbacks;
+#endif
 using UnityEngine;
 
 
@@ -40,47 +42,51 @@ public class ScriptablesDatabase : SerializedScriptableObject
 		}
 	}
 
+#if UNITY_EDITOR
 	[DidReloadScripts, InitializeOnLoadMethod,
+ #else
+[
+ #endif
 	 RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
 	private static void SetSingleton() => __i ??= _i;
 
 	public string[][] scriptables2D;
-	[SerializeField]
+	[SerializeField, DictionaryDrawerSettings(DisplayMode = DictionaryDisplayOptions.Foldout)]
 	private SDictionary<string, int> scriptablesIByType;
 	private Dictionary<Type, ScriptableMonoObject[]> typeScriptablesDic = new();
 
 
-	private static int lastFrameRefreshed;
+	public static bool dirty = false;
+	[ExecuteOnReload, RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded),
+ #if UNITY_EDITOR
+	 InitializeOnLoadMethod]
+#else
+	]
+#endif
 	public static bool TryRefresh()
 	{
+	#if !UNITY_EDITOR
+		return false;
+		}
+	#else
 		//Update monoscripts listing if not previously updated, or if we are in editor and not playing (max once per frame)
-		if (Time.frameCount == lastFrameRefreshed
-		    || !(Application.isEditor && !Application.isPlaying)
-		    && _i.scriptablesIByType != null
-		    && _i.scriptablesIByType.Any())
-			return false;
+		if (!dirty) return false;
 
-		Refresh();
+		Refresh(false);
 		return true;
 	}
 
 
-#if UNITY_EDITOR
 	public int callbackOrder { get; }
 	public void OnPreprocessBuild(BuildTarget target, string path) => Refresh();
-#endif
 
-	[MenuItem("Tools/Scriptable Objects/Refresh Database")]
+	[MenuItem("Tools/Scriptable Objects/Refresh Database#%s")]
 	private static void MenuRefresh() => Refresh(false);
-
-
-	[ExecuteOnReload, RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded),
-	 InitializeOnLoadMethod]
-	private static void AutoRefresh() => Refresh(true);
 
 	[Button]
 	public static void Refresh(bool silent = true)
 	{
+		int initialLength = _i.scriptables2D?.Length ?? 0;
 		IEnumerable<Type> cachableType = AppDomain.CurrentDomain.GetAssemblies()
 			.SelectMany(assembly => assembly.GetTypes())
 			.Where(t => t.ImplementsOrInherits(typeof(ICacheable))
@@ -94,8 +100,10 @@ public class ScriptablesDatabase : SerializedScriptableObject
 		_i.typeScriptablesDic = cachableType
 			.Select(t => new KeyValuePair<Type, ScriptableMonoObject[]>(t,
 				AssetDatabase.FindAssets("t:" + t)
-					.Select(g =>
-						AssetDatabase.LoadAssetAtPath<ScriptableMonoObject>(AssetDatabase.GUIDToAssetPath(g)))
+					.Select(g => AssetDatabase.GUIDToAssetPath(g))
+					.Where(p => p[..17] == "Assets/Resources/")
+					.Select(p =>
+						AssetDatabase.LoadAssetAtPath<ScriptableMonoObject>(p))
 					.Where(s => s.enabled)
 					.ToArray())).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
@@ -104,16 +112,22 @@ public class ScriptablesDatabase : SerializedScriptableObject
 		foreach (var row in _i.typeScriptablesDic.Select((k, i) => new { k, i }))
 		{
 			_i.scriptables2D[row.i] = row.k.Value.Select(s => AssetDatabase.GetAssetPath(s)
-				.Replace("Assets/Resources/", "")).ToArray();
+					.Replace("Assets/Resources/", "")
+					.Replace(".asset", ""))
+				.ToArray();
 			_i.scriptablesIByType[row.k.Key.Name] = row.i;
 		}
+		EditorUtility.SetDirty(_i);
+		AssetDatabase.SaveAssetIfDirty(_i);
 
-		lastFrameRefreshed = Time.frameCount;
+		dirty = false;
 
 		if (silent) return;
 
-		Debug.Log(Enumerable.Select(_i.typeScriptablesDic, kvp => $"{kvp.Key} ({kvp.Value.Length})").Join());
+		Debug.Log($"Rebuilt scriptables cache. {_i.scriptables2D.Length - initialLength} size change.\n"
+			+ Enumerable.Select(_i.typeScriptablesDic, kvp => $"{kvp.Key} ({kvp.Value.Length})").Join("\n"));
 	}
+#endif
 
 
 	public static IEnumerable<T> Get<T>() =>
@@ -130,8 +144,19 @@ public class ScriptablesDatabase : SerializedScriptableObject
 		if (_i.scriptablesIByType.TryGetValue(type.Name, out int index))
 		{
 			_i.typeScriptablesDic[type] = _i.scriptables2D[index]
-				.Select(p => Resources.Load(p) as ScriptableMonoObject)
+				.Select(p =>
+				{
+					var smo = Resources.Load(p) as ScriptableMonoObject;
+					if (smo == null) Debug.LogError($"Error loading {type.Name} at {p}");
+					return smo;
+				})
+				.WhereNotNull()
 				.ToArray();
+			if (_i.scriptables2D[index].Length != _i.typeScriptablesDic[type].Length && !dirty)
+			{
+				dirty = true;
+				Debug.Log($"Set Scriptables Database to dirty due to null resources loading for {type}");
+			}
 			return _i.typeScriptablesDic[type];
 		}
 
@@ -139,3 +164,35 @@ public class ScriptablesDatabase : SerializedScriptableObject
 		return Enumerable.Empty<ScriptableMonoObject>();
 	}
 }
+
+#if UNITY_EDITOR
+class ScriptablesDatabaseEditorCallbacks : UnityEditor.AssetModificationProcessor
+{
+	private static AssetDeleteResult OnWillDeleteAsset(string assetPath, RemoveAssetOptions options)
+	{
+		SetDirty(assetPath);
+		return AssetDeleteResult.DidNotDelete;
+	}
+	private static AssetMoveResult OnWillMoveAsset(string sourcePath, string destinationPath)
+	{
+		SetDirty(sourcePath, destinationPath);
+		return AssetMoveResult.DidNotMove;
+	}
+	private static void OnWillCreateAsset(string assetName) => SetDirty(assetName);
+	private static string[] OnWillSaveAssets(string[] paths)
+	{
+		if (paths.Any(p => p.Contains("Resources/")))
+		{
+			ScriptablesDatabase.TryRefresh();
+		}
+		return paths;
+	}
+	private static void SetDirty(params string[] paths)
+	{
+		if (ScriptablesDatabase.dirty || !paths.Any(p => p.Contains("Resources/"))) return;
+
+		Debug.Log($"Set Scriptables Database to dirty due to changes with {paths.Join()}");
+		ScriptablesDatabase.dirty = true;
+	}
+}
+#endif
