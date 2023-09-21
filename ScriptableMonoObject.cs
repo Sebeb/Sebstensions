@@ -3,9 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using Sirenix.Utilities;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 using UnityEngine;
 using Humanizer;
 using Sirenix.OdinInspector;
@@ -60,6 +61,8 @@ public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISer
 	public static T CreateNew<T>(string name = null) where T : ScriptableMonoObject =>
 		CreateNew(typeof(T), name) as T;
 
+#if UNITY_EDITOR
+
 	[MenuItem("Tools/Scriptable Objects/Reset Locations", priority = -99998)]
 	public static void MoveAllToDefaultLocation()
 	{
@@ -94,6 +97,7 @@ public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISer
 		AssetDatabase.SaveAssets();
 
 	}
+#endif
 
 	public static ScriptableMonoObject CreateNew(Type type, string name = null,
 		OverwriteMode overwriteMode = OverwriteMode.Increment)
@@ -133,6 +137,7 @@ public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISer
 			overwrite = !File.Exists(assetPath) ? null : overwriteMode;
 		}
 
+	#if UNITY_EDITOR
 		ScriptableMonoObject createdAsset = null;
 		if (overwrite is not OverwriteMode.Ignore)
 		{
@@ -152,6 +157,10 @@ public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISer
 				assetPath),
 			createdAsset);
 		return createdAsset;
+	#else
+		Debug.LogError($"Could not create new assets at {assetPath} outside of editor");
+		return existingObject;
+	#endif
 	}
 
 	protected void SetAssetName(string newName = null)
@@ -195,9 +204,19 @@ public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISer
 	{
 		if (!Application.isPlaying) return;
 
+		Debug.Log($"Starting {ScriptablesDatabase.Get<ScriptableMonoObject>().Count()} mono scripts");
 		foreach (ScriptableMonoObject monoScript in ScriptablesDatabase.Get<ScriptableMonoObject>())
 		{
-			monoScript.ScriptAwake();
+			//Handle exceptions
+			try
+			{
+				monoScript.ScriptAwake();
+			}
+			catch (Exception e)
+			{
+				Debug.LogError($"Error starting {monoScript.name}: {e}");
+			}
+			
 		}
 	}
 

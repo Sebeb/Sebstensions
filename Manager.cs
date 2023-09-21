@@ -23,7 +23,12 @@ public static class Managers
 		return null;
 	}
 
-	[InitializeOnLoadMethod, ExecuteOnReload]
+#if UNITY_EDITOR
+	[InitializeOnLoadMethod,
+ #else
+[
+ #endif
+	 ExecuteOnReload]
 	private static void PopulateAssociationDic()
 	{
 		ScriptablesDatabase.TryRefresh();
