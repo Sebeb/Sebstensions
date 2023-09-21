@@ -366,6 +366,7 @@ public static class Seb
 		relativeVec.Normalize();
 		return (a * Mathf.Cos(theta)) + relativeVec * Mathf.Sin(theta);
 	}
+
 #endregion
 
 #region Rect Transform
@@ -2956,13 +2957,19 @@ public static class Lines
 
 public static class Reflection
 {
+	/// <summary>Gets all types that derive from <typeparamref name="T"/>, have a default constructor and are not abstract or generic.</summary>
 	public static IEnumerable<Type> GetAllScriptChildTypes<T>() where T : class =>
 		GetAllScriptChildTypes(typeof(T));
 	public static IEnumerable<Type> GetAllScriptChildTypes(Type type)
 	{
+	#if UNITY_EDITOR
 		return TypeCache.GetTypesDerivedFrom(type)
+		#else
+		return AppDomain.CurrentDomain.GetAssemblies()
+			.SelectMany(a => a.GetTypes())
+			.Where(t => t.IsSubclassOf(type))
+		#endif
 			.Where(t => !t.ContainsGenericParameters
-				&& !t.ContainsGenericParameters
 				&& !t.IsAbstract);
 	}
 
@@ -2986,10 +2993,8 @@ public static class Reflection
 
 	public static IEnumerable<Type> GetAllSingletonScriptChildrenTypes<T>() where T : class
 	{
-		return TypeCache.GetTypesDerivedFrom<T>()
-			.Where(t => !t.ContainsGenericParameters
-				&& t.GetConstructor(Type.EmptyTypes) != null
-				&& !t.IsAbstract)
+		return GetAllScriptChildTypes<T>()
+			.Where(t => t.GetConstructor(Type.EmptyTypes) != null)
 			.Select(t =>
 				new Tuple<Type, IEnumerable<Type>>(t,
 					t.GetBaseClasses(true)))
