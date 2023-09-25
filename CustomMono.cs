@@ -9,7 +9,7 @@ using UnityEditor;
 using Object = UnityEngine.Object;
 
 
-public abstract class CustomMono : MonoBehaviour
+public abstract class CustomMono : SerializedMonoBehaviour
 {
 #if UNITY_EDITOR
 	[FoldoutGroup("Settings"), ShowInInspector, LabelText("Settings"), ShowIf("GetSettings"),
