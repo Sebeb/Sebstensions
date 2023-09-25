@@ -99,11 +99,11 @@ public static class Seb
 		else
 			throw new ArgumentException();
 	}
-	public static Vector2 XZ(this Vector3 input)
-	{
-		return new Vector2(input.x, input.z);
-	}
-
+	public static float[] ToArray(this Vector2 input) => new[] { input.x, input.y };
+	public static int[] ToArray(this Vector2Int input) => new[] { input.x, input.y };
+	public static float[] ToArray(this Vector3 input) => new[] { input.x, input.y, input.z };
+	public static int[] ToArray(this Vector3Int input) => new[] { input.x, input.y, input.z };
+	
 	public static Vector3 Y2Z(this Vector2 input, float newY = 0)
 	{
 		return new Vector3(input.x, newY, input.y);
@@ -145,6 +145,9 @@ public static class Seb
 
 	public static Vector2 CapMin(this Vector2 input, float xMin, float yMin) =>
 		new(input.x.CapMin(xMin), input.y.CapMin(yMin));
+
+	public static Vector2 Clamp(this Vector2 value, Vector2 min, Vector2 max) =>
+		new(Mathf.Clamp(value.x, min.x, max.x), Mathf.Clamp(value.y, min.y, max.y));
 
 	public static Vector2 Multiply(this Vector2 input, Vector2 value) => new(input.x * value.x, input.y * value.y);
 
@@ -287,6 +290,10 @@ public static class Seb
 	public static Vector3 WrapAngle(this Vector3 angle) =>
 		new(WrapAngle(angle.x), WrapAngle(angle.y), WrapAngle(angle.z));
 
+	/// <summary>Converts an euler rotation to be between 180 and -180, as it appears in the inspector </summary>
+	public static Vector2 WrapAngle(this Vector2 angle) =>
+		new(WrapAngle(angle.x), WrapAngle(angle.y));
+
 	public static Vector3 UnwrapAngle(this Vector3 angle) =>
 		new(UnwrapAngle(angle.x), UnwrapAngle(angle.y), UnwrapAngle(angle.z));
 	/// <summary>Converts an euler rotation to be between 180 and -180, as it appears in the inspector </summary>
@@ -366,6 +373,32 @@ public static class Seb
 		relativeVec.Normalize();
 		return (a * Mathf.Cos(theta)) + relativeVec * Mathf.Sin(theta);
 	}
+
+	//swizzles of size 2
+	public static Vector2 XX(this Vector2 a) => new(a.x, a.x);
+	public static Vector2 YX(this Vector2 a) => new(a.y, a.x);
+	public static Vector2 XY(this Vector2 a) => new(a.x, a.y);
+	public static Vector2 YY(this Vector2 a) => new(a.y, a.y);
+
+	//swizzles of size 3 to 2
+	public static Vector2 XX(this Vector3 a) => new(a.x, a.x);
+	public static Vector2 YX(this Vector3 a) => new(a.y, a.x);
+	public static Vector2 XY(this Vector3 a) => a;
+	public static Vector2 YY(this Vector3 a) => new(a.y, a.y);
+	public static Vector2 XZ(this Vector3 a) => new(a.x, a.z);
+	public static Vector2 ZX(this Vector3 a) => new(a.z, a.x);
+	public static Vector2 YZ(this Vector3 a) => new(a.y, a.z);
+	public static Vector2 ZY(this Vector3 a) => new(a.z, a.y);
+
+	//swizzles of size 3
+	public static Vector3 XXX(this Vector2 a) => new(a.x, a.x, a.x);
+	public static Vector3 YXX(this Vector2 a) => new(a.y, a.x, a.x);
+	public static Vector3 XYX(this Vector2 a) => new(a.x, a.y, a.x);
+	public static Vector3 YYX(this Vector2 a) => new(a.y, a.y, a.x);
+	public static Vector3 XXY(this Vector2 a) => new(a.x, a.x, a.y);
+	public static Vector3 YXY(this Vector2 a) => new(a.y, a.x, a.y);
+	public static Vector3 XYY(this Vector2 a) => new(a.x, a.y, a.y);
+	public static Vector3 YYY(this Vector2 a) => new(a.y, a.y, a.y);
 
 #endregion
 
