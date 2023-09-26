@@ -35,13 +35,14 @@ public abstract class SingletonMonoBehaviour<T> : CustomMono where T : Singleton
 			}
 		}
 	}
-	protected static T GetInstance(bool quiet = false)
+	public static T GetInstance(bool createIfNonExistent = true, bool quiet = false)
 	{
-		if (_instance) { return _instance; }
+		if (_instance) return _instance;
 
 		var instances = new List<T>(FindObjectsOfType<T>());
 		if (instances.Count == 0)
 		{
+			if (!createIfNonExistent) return null;
 			if (ScriptHelper.quitting)
 			{
 				if (!quiet) Debug.LogError($"{typeof(T)} singleton is no longer accessible since the application is quitting");
@@ -66,7 +67,7 @@ public abstract class SingletonMonoBehaviour<T> : CustomMono where T : Singleton
 		return _instance;
 	}
 
-	public static T _i => _instance ??= GetInstance(true);
+	public static T _i => _instance ??= GetInstance(quiet: true);
 	private static T _instance;
 }
 
