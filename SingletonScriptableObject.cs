@@ -91,7 +91,7 @@ public class ScriptableSingletonHelper : MonoBehaviour
 			if (guids.Length > 1)
 			{
 				Debug.Log(
-					$"Multiple instances of {monoObjectType} found at:{string.Join(", ", guids.Select(AssetDatabase.GUIDToAssetPath))}");
+					$"Multiple instances of {monoObjectType} found at: {string.Join(", ", guids.Select(AssetDatabase.GUIDToAssetPath))}");
 			}
 			else if (guids.Length == 0)
 			{

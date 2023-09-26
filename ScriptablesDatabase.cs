@@ -80,7 +80,7 @@ public class ScriptablesDatabase : SerializedScriptableObject
 	public int callbackOrder { get; }
 	public void OnPreprocessBuild(BuildTarget target, string path) => Refresh();
 
-	[MenuItem("Tools/Scriptable Objects/Refresh Database#%s")]
+	[MenuItem("Tools/Scriptable Objects/Refresh Database #%s")]
 	private static void MenuRefresh() => Refresh(false);
 
 	[Button]
@@ -101,7 +101,6 @@ public class ScriptablesDatabase : SerializedScriptableObject
 			.Select(t => new KeyValuePair<Type, ScriptableMonoObject[]>(t,
 				AssetDatabase.FindAssets("t:" + t)
 					.Select(g => AssetDatabase.GUIDToAssetPath(g))
-					.Where(p => p[..17] == "Assets/Resources/")
 					.Select(p =>
 						AssetDatabase.LoadAssetAtPath<ScriptableMonoObject>(p))
 					.Where(s => s.enabled)
@@ -111,9 +110,21 @@ public class ScriptablesDatabase : SerializedScriptableObject
 
 		foreach (var row in _i.typeScriptablesDic.Select((k, i) => new { k, i }))
 		{
-			_i.scriptables2D[row.i] = row.k.Value.Select(s => AssetDatabase.GetAssetPath(s)
-					.Replace("Assets/Resources/", "")
-					.Replace(".asset", ""))
+			_i.scriptables2D[row.i] = row.k.Value.Select(s =>
+				{
+					string path = AssetDatabase.GetAssetPath(s);
+					if (path[..17] != "Assets/Resources/")
+					{
+						return path;
+					}
+					else
+					{
+						path = path.Replace("Assets/Resources/", "")
+							.Replace(".asset", "");
+					}
+
+					return path;
+				})
 				.ToArray();
 			_i.scriptablesIByType[row.k.Key.Name] = row.i;
 		}
@@ -147,7 +158,11 @@ public class ScriptablesDatabase : SerializedScriptableObject
 				.Select(p =>
 				{
 					var smo = Resources.Load(p) as ScriptableMonoObject;
-					if (smo == null) Debug.LogError($"Error loading {type.Name} at {p}");
+				#if UNITY_EDITOR
+					if (smo == null) smo = AssetDatabase.LoadAssetAtPath(p, type) as ScriptableMonoObject;
+				#endif
+					if (smo == null && Debug.isDebugBuild && p[..17] == "Assets/Resources/")
+						Debug.LogError($"Error loading {type.Name} at {p}");
 					return smo;
 				})
 				.WhereNotNull()
