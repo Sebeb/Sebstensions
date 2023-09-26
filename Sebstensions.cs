@@ -99,10 +99,6 @@ public static class Seb
 		else
 			throw new ArgumentException();
 	}
-	public static float[] ToArray(this Vector2 input) => new[] { input.x, input.y };
-	public static int[] ToArray(this Vector2Int input) => new[] { input.x, input.y };
-	public static float[] ToArray(this Vector3 input) => new[] { input.x, input.y, input.z };
-	public static int[] ToArray(this Vector3Int input) => new[] { input.x, input.y, input.z };
 	
 	public static Vector3 Y2Z(this Vector2 input, float newY = 0)
 	{
@@ -1838,8 +1834,11 @@ public static class Seb
 
 	public static float CapMax(this float f, float max) => Mathf.Min(f, max);
 	public static float CapMin(this float f, float min) => Mathf.Max(f, min);
+	public static float Clamp(this float f, float min, float max) => Mathf.Clamp(f, min, max);
 	public static int CapMax(this int i, int max) => Mathf.Min(i, max);
 	public static int CapMin(this int i, int min) => Mathf.Max(i, min);
+	public static int Clamp(this int i, int min, int max) => Mathf.Clamp(i, min, max);
+	
 
 #endregion
 
