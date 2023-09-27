@@ -45,7 +45,7 @@ public abstract class SingletonScriptableObject<T> : ScriptableMonoObject, ICach
 			{
 			#if UNITY_EDITOR
 				Debug.LogError("Multiple "
-					+ _i.GetType()
+					+ instances.First().GetType()
 					+ " detected. Using "
 					+ AssetDatabase.GetAssetPath(instances.FirstOrDefault())
 					+ ". Consider destroying imposters.");
