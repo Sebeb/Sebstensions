@@ -58,13 +58,14 @@ public class ScriptHelper : MonoBehaviour
 		}
 	}
 
-	public static Coroutine WaitThenExecute(Func<bool> waitUntilTrue, Action action)
+	public static Coroutine WaitThenExecute(Func<bool> waitUntilTrue, Action action, Action waitingAciton = null)
 	{
 		return StartCoroutine(Coroutine());
 		IEnumerator Coroutine()
 		{
 			while (waitUntilTrue?.Invoke() == false)
 			{
+				waitingAciton?.Invoke();
 				yield return null;
 			}
 			action?.Invoke();
