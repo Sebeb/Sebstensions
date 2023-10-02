@@ -16,11 +16,6 @@ public class ScriptHelper : MonoBehaviour
 	{
 		get
 		{
-			if (!Application.isPlaying)
-			{
-				Debug.LogError("Coroutines only operational in play-mode");
-				return null;
-			}
 			if (_instance == null)
 			{
 				SetInstance();
@@ -90,8 +85,8 @@ public class ScriptHelper : MonoBehaviour
 	[InitializeOnLoadMethod]
 	private static void SetInstanceEditor()
 	{
-		Debug.Log(Application.isPlaying);
-		if (!Application.isPlaying) return;
+		// Debug.Log(Application.isPlaying);
+		if (Application.isPlaying) return;
 		SetInstance();
 	}
 #endif
@@ -111,7 +106,7 @@ public class ScriptHelper : MonoBehaviour
 			runnerObj = new GameObject("Script Helper");
 			runnerObj.AddComponent<ScriptHelper>();
 		}
-		fakeStart = Time.frameCount != 0;
+		fakeStart = Application.isPlaying && Time.frameCount != 0;
 		if (fakeStart) Debug.Log("Faking game start");
 
 		runnerObj.hideFlags = HideFlags.DontSave;
