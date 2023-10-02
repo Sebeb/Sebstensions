@@ -82,7 +82,7 @@ public class ScriptHelper : MonoBehaviour
 	private static bool fakeStart;
 
 #if UNITY_EDITOR
-	[InitializeOnLoadMethod]
+	[InitializeOnLoadMethod, UnityEditor.Callbacks.DidReloadScripts]
 	private static void SetInstanceEditor()
 	{
 		// Debug.Log(Application.isPlaying);
