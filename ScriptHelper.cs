@@ -35,17 +35,17 @@ public class ScriptHelper : MonoBehaviour
 	}
 	public static void StopCoroutine(Coroutine routine) => ((MonoBehaviour)mono).StopCoroutine(routine);
 
-	public static Coroutine WaitThenExecute(float time, Action action,
+	public static Coroutine WaitThenExecute(float seconds, Action action,
 		Action<float, float> timeOut = null)
 	{
 		return StartCoroutine(Coroutine());
 		IEnumerator Coroutine()
 		{
-			float endTime = Time.time + time;
+			float endTime = Time.time + seconds;
 			while (Time.time < endTime)
 			{
 				float remainingTime = endTime - Time.time;
-				timeOut?.Invoke(remainingTime, 1 - (remainingTime / time));
+				timeOut?.Invoke(remainingTime, 1 - (remainingTime / seconds));
 				yield return null;
 			}
 			timeOut?.Invoke(0, 1);
