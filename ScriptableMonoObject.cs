@@ -3,14 +3,30 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using Sirenix.Utilities;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 using UnityEngine;
 using Humanizer;
 using Sirenix.OdinInspector;
 
 
+public interface IInitCallbacks : IInitCallbacksNoReinit {}
+
+public interface IInitCallbacksNoReinit : ICacheable
+{
+	public void Initialize();
+	public void Deinitialize();
+}
+public interface IStartCallback : ICacheable
+{
+	void ScriptStart();
+}
+public interface IUpdateCallback : ICacheable
+{
+	void Update();
+}
 public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISerializationCallbackReceiver
 {
 	[ShowInInlineEditors]
@@ -22,6 +38,7 @@ public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISer
 		{ "Singleton", "Scriptable Object", "Scriptable" };
 
 	protected virtual bool autoMovable => true;
+	protected virtual bool isEditorResource => false;
 
 	public virtual IEnumerable<string> GetDefaultDirectory() =>
 		GetTypeDirectory(GetType(), typeof(ScriptableMonoObject));
@@ -51,7 +68,7 @@ public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISer
 	}
 	public string GetDefaultPath()
 	{
-		IEnumerable<string> breadcrumbs = new[] { "Assets", "Resources" }
+		IEnumerable<string> breadcrumbs = new[] { "Assets", isEditorResource ? "Resources (Editor)": "Resources" }
 			.Concat(GetDefaultDirectory()).Concat(!enabled ? new[] { "Disabled" } : new string[0]);
 
 		return breadcrumbs.Join("/");
@@ -59,6 +76,8 @@ public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISer
 
 	public static T CreateNew<T>(string name = null) where T : ScriptableMonoObject =>
 		CreateNew(typeof(T), name) as T;
+
+#if UNITY_EDITOR
 
 	[MenuItem("Tools/Scriptable Objects/Reset Locations", priority = -99998)]
 	public static void MoveAllToDefaultLocation()
@@ -94,6 +113,7 @@ public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISer
 		AssetDatabase.SaveAssets();
 
 	}
+#endif
 
 	public static ScriptableMonoObject CreateNew(Type type, string name = null,
 		OverwriteMode overwriteMode = OverwriteMode.Increment)
@@ -133,6 +153,7 @@ public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISer
 			overwrite = !File.Exists(assetPath) ? null : overwriteMode;
 		}
 
+	#if UNITY_EDITOR
 		ScriptableMonoObject createdAsset = null;
 		if (overwrite is not OverwriteMode.Ignore)
 		{
@@ -152,6 +173,10 @@ public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISer
 				assetPath),
 			createdAsset);
 		return createdAsset;
+	#else
+		Debug.LogError($"Could not create new assets at {assetPath} outside of editor");
+		return existingObject;
+	#endif
 	}
 
 	protected void SetAssetName(string newName = null)
@@ -195,9 +220,20 @@ public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISer
 	{
 		if (!Application.isPlaying) return;
 
-		foreach (ScriptableMonoObject monoScript in ScriptablesDatabase.Get<ScriptableMonoObject>())
+		List<IStartCallback> awakeCallbacks = ScriptablesDatabase.Get<IStartCallback>().ToList();
+		Debug.Log($"Starting {awakeCallbacks.Count()} mono scripts");
+		foreach (IStartCallback monoScript in awakeCallbacks)
 		{
-			monoScript.ScriptAwake();
+			//Handle exceptions
+			try
+			{
+				monoScript.ScriptStart();
+			}
+			catch (Exception e)
+			{
+				Debug.LogError($"Error starting {((ScriptableMonoObject)monoScript).name}: {e}");
+			}
+
 		}
 	}
 
@@ -205,10 +241,10 @@ public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISer
 	private static bool initedOnce;
 	public static void InitSingletons()
 	{
-		foreach (ScriptableMonoObject monoScript in ScriptablesDatabase.Get<ScriptableMonoObject>())
+		foreach (IInitCallbacksNoReinit monoScript in initedOnce 
+			         ? ScriptablesDatabase.Get<IInitCallbacks>() 
+			         : ScriptablesDatabase.Get<IInitCallbacksNoReinit>())
 		{
-			if (initedOnce && !monoScript.ReInitOnRestart()) { continue; }
-
 			monoScript.Initialize();
 		}
 		initedOnce = true;
@@ -217,29 +253,22 @@ public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISer
 	public static void UpdateMonoScripts()
 	{
 		if (!Application.isPlaying) { return; }
-		foreach (ScriptableMonoObject monoScript in ScriptablesDatabase.Get<ScriptableMonoObject>())
+		foreach (IUpdateCallback monoScript in ScriptablesDatabase.Get<IUpdateCallback>())
 		{
 			monoScript.Update();
 		}
 	}
 
-	public virtual bool ReInitOnRestart() => true;
 
 	public static void ResetMonoScripts(bool isRestart)
 	{
-		foreach (ScriptableMonoObject monoScript in ScriptablesDatabase.Get(typeof(SingletonScriptableObject<>)))
+		foreach (IInitCallbacksNoReinit monoScript in isRestart
+			? ScriptablesDatabase.Get<IInitCallbacks>()
+			: ScriptablesDatabase.Get<IInitCallbacksNoReinit>())
 		{
-			if (isRestart && !monoScript.ReInitOnRestart()) { continue; }
-
 			monoScript.Deinitialize();
 		}
 	}
-
-	protected virtual void Initialize() {}
-	protected virtual void ScriptAwake() {}
-	protected virtual void Update() {}
-	protected virtual void Deinitialize() {}
-
 	protected static Coroutine StartCoroutine(IEnumerator coro, bool allowInEditor = false) =>
 		ScriptHelper.StartCoroutine(coro, allowInEditor);
 	protected void StopCoroutine(Coroutine coro) => ScriptHelper.StopCoroutine(coro);

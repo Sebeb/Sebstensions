@@ -1,11 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 
 public abstract class SingletonMonoBehaviour<T> : CustomMono where T : SingletonMonoBehaviour<T>
 {
-	protected bool AssertSingleton(bool thisInstance)
+	protected bool AssertSingleton(bool thisInstance, bool destroyOthers = true)
 	{
 		List<SingletonMonoBehaviour<T>> instances =
 			new List<SingletonMonoBehaviour<T>>(FindObjectsOfType<T>()
@@ -24,34 +25,44 @@ public abstract class SingletonMonoBehaviour<T> : CustomMono where T : Singleton
 				_instance = this as T;
 				foreach (SingletonMonoBehaviour<T> instance in instances)
 				{
-					DestroyImmediate(instance.gameObject);
+					instance.gameObject.Destroy();
 				}
 				return true;
 			}
 			else
 			{
-				DestroyImmediate(gameObject);
+				gameObject.Destroy();
 				return false;
 			}
 		}
 	}
-	protected static T GetInstance(bool quiet = false)
+	public static T GetInstance(bool createIfNonExistent = true, bool quiet = false)
 	{
-		if (_instance) { return _instance; }
+		if (_instance) return _instance;
 
 		var instances = new List<T>(FindObjectsOfType<T>());
 		if (instances.Count == 0)
 		{
+			if (!createIfNonExistent) return null;
 			if (ScriptHelper.quitting)
 			{
-				if (!quiet) Debug.LogError($"{typeof(T)} singleton is no longer accessible since the application is quitting");
+				if (!quiet)
+					Debug.LogError(
+						$"{typeof(T)} singleton is no longer accessible since the application is quitting");
 				return null;
 			}
+		#if UNITY_EDITOR
 			if (!Application.isPlaying)
 			{
 				if (!quiet) Debug.LogError($"{typeof(T)} singleton only exists in playtime");
 				return null;
 			}
+			if (!ScriptHelper.foundationEnabled)
+			{
+				if (!quiet) Debug.LogError($"{typeof(T)} singleton only exists in a scene");
+				return null;
+			}
+		#endif
 			_instance = MonoTools.MakeSingleton<T>();
 		}
 		else
@@ -66,7 +77,7 @@ public abstract class SingletonMonoBehaviour<T> : CustomMono where T : Singleton
 		return _instance;
 	}
 
-	public static T _i => _instance ??= GetInstance();
+	public static T _i => _instance != null ? _instance : _instance = GetInstance(quiet: true);
 	private static T _instance;
 }
 
@@ -80,6 +91,7 @@ public static class MonoTools
 		{
 			singletonsParent = ((Transform)null).GetOrMakeChild("Singletons");
 			// Debug.Log("Made new singletons parent!");
+
 			Object.DontDestroyOnLoad(singletonsParent.gameObject);
 			singletonsParent.transform.SetSiblingIndex(0);
 		}

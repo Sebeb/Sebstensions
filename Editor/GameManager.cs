@@ -37,6 +37,8 @@ public class GameManager : OdinMenuEditorWindow
 
 		//Recursively add Scriptable Objects from the Assets/Data folder, ensuring that the path is correct
 		tree.AddAllAssetsAtPath("", "Assets/Resources/Managers", typeof(ScriptableMonoObject), true, false);
+		tree.AddAllAssetsAtPath("", "Assets/Resources (Editor)/Managers", typeof(ScriptableMonoObject), true,
+			false);
 		tree.SortMenuItemsByName();
 
 		return tree;

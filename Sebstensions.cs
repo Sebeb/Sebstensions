@@ -6,7 +6,9 @@ using System.Collections;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Web;
 using JetBrains.Annotations;
 using Sirenix.OdinInspector;
 using Sirenix.Utilities;
@@ -45,6 +47,7 @@ using UnityEditor;
 // 	public static explicit operator T(Lazy<T> aLazy) => aLazy.value;
 // }
 
+public enum DecimalTruncation { Round, Floor, Ceil }
 
 public static class Seb
 {
@@ -69,7 +72,7 @@ public static class Seb
 		int frames = (int)(Time.frameCount - timeFrame.y);
 
 		Debug.Log(
-			$"{(debugLabel.IsNullOrEmpty() ? key : debugLabel)}: {time.Round(3)}s - {(frames / time).Round((2))}FPS - {frames} frames");
+			$"{(debugLabel.IsNullOrEmpty() ? key : debugLabel)}: {time.ToDecimalPlaces(3)}s - {(frames / time).ToDecimalPlaces((2))}FPS - {frames} frames");
 	#endif
 	}
 
@@ -99,11 +102,8 @@ public static class Seb
 		else
 			throw new ArgumentException();
 	}
-	public static Vector2 XZ(this Vector3 input)
-	{
-		return new Vector2(input.x, input.z);
-	}
 
+	public static Vector3Int ToInt(this Vector3 input) => new((int)input.x, (int)input.y, (int)input.z);
 	public static Vector3 Y2Z(this Vector2 input, float newY = 0)
 	{
 		return new Vector3(input.x, newY, input.y);
@@ -132,6 +132,10 @@ public static class Seb
 	}
 	public static Vector2 Rotate(this Vector2 aVec, float aDegree) => ComplexMult(aVec, Rotation(aDegree));
 
+	public static Vector2 Abs(this Vector2 aVec) => new(Mathf.Abs(aVec.x), Mathf.Abs(aVec.y));
+	public static Vector3 Abs(this Vector3 aVec) => new(Mathf.Abs(aVec.x), Mathf.Abs(aVec.y), Mathf.Abs(aVec.z));
+	public static float Sum(this Vector2 aVec) => aVec.x + aVec.y;
+	public static float Sum(this Vector3 aVec) => aVec.x + aVec.y + aVec.z;
 	public static Vector2 SetX(this Vector2 input, float value) => new(value, input.y);
 	public static Vector2 SetY(this Vector2 input, float value) => new(input.x, value);
 	public static Vector2 MoveX(this Vector2 input, float value) => new(input.x + value, input.y);
@@ -145,6 +149,9 @@ public static class Seb
 
 	public static Vector2 CapMin(this Vector2 input, float xMin, float yMin) =>
 		new(input.x.CapMin(xMin), input.y.CapMin(yMin));
+
+	public static Vector2 Clamp(this Vector2 value, Vector2 min, Vector2 max) =>
+		new(Mathf.Clamp(value.x, min.x, max.x), Mathf.Clamp(value.y, min.y, max.y));
 
 	public static Vector2 Multiply(this Vector2 input, Vector2 value) => new(input.x * value.x, input.y * value.y);
 
@@ -178,12 +185,10 @@ public static class Seb
 
 	public static Vector3 CapMin(this Vector3 input, float value) =>
 		new(input.x.CapMin(value), input.y.CapMin(value), input.z.CapMin(value));
-	public static Vector3 Clamp(this Vector3 input, Vector3 min, Vector3 max)
-	{
-		return new Vector3(Mathf.Clamp(input.x, min.x, max.x),
+	public static Vector3 Clamp(this Vector3 input, Vector3 min, Vector3 max) =>
+		new(Mathf.Clamp(input.x, min.x, max.x),
 			Mathf.Clamp(input.y, min.y, max.y),
 			Mathf.Clamp(input.z, min.z, max.z));
-	}
 	public static Vector3 Multiply(this Vector3 input, Vector3 value) =>
 		new(input.x * value.x, input.y * value.y, input.z * value.z);
 
@@ -287,6 +292,10 @@ public static class Seb
 	public static Vector3 WrapAngle(this Vector3 angle) =>
 		new(WrapAngle(angle.x), WrapAngle(angle.y), WrapAngle(angle.z));
 
+	/// <summary>Converts an euler rotation to be between 180 and -180, as it appears in the inspector </summary>
+	public static Vector2 WrapAngle(this Vector2 angle) =>
+		new(WrapAngle(angle.x), WrapAngle(angle.y));
+
 	public static Vector3 UnwrapAngle(this Vector3 angle) =>
 		new(UnwrapAngle(angle.x), UnwrapAngle(angle.y), UnwrapAngle(angle.z));
 	/// <summary>Converts an euler rotation to be between 180 and -180, as it appears in the inspector </summary>
@@ -309,43 +318,33 @@ public static class Seb
 	public static Vector3 Average(this IEnumerable<Vector3> input) =>
 		input.Aggregate(new Vector3(0, 0, 0), (s, v) => s + v) / input.Count();
 
-	public static Vector3 Round(this Vector3 vector3, int decimalPlaces = 2)
-	{
-		float multiplier = 1;
-		for (int i = 0; i < decimalPlaces; i++)
+
+	public static Vector3 ToDecimalPlaces(this Vector3 vector3, int decimalPlaces = 2,
+		DecimalTruncation truncationMethod = DecimalTruncation.Round) => new(
+		vector3.x.ToDecimalPlaces(decimalPlaces, truncationMethod),
+		vector3.y.ToDecimalPlaces(decimalPlaces, truncationMethod),
+		vector3.z.ToDecimalPlaces(decimalPlaces, truncationMethod));
+
+	public static Vector2 ToDecimalPlaces(this Vector2 vector3, int decimalPlaces = 2,
+		DecimalTruncation truncationMethod = DecimalTruncation.Round) => new(
+		vector3.x.ToDecimalPlaces(decimalPlaces, truncationMethod),
+		vector3.y.ToDecimalPlaces(decimalPlaces, truncationMethod));
+
+	public static int ToInt(this float input, DecimalTruncation truncationMethod = DecimalTruncation.Round) =>
+		(int)(truncationMethod switch
 		{
-			multiplier *= 10f;
-		}
-
-		return new Vector3(
-			Mathf.Round(vector3.x * multiplier) / multiplier,
-			Mathf.Round(vector3.y * multiplier) / multiplier,
-			Mathf.Round(vector3.z * multiplier) / multiplier);
-	}
-
-	public static Vector2 Round(this Vector2 vector3, int decimalPlaces = 2)
+			DecimalTruncation.Round => Mathf.Round(input),
+			DecimalTruncation.Floor => Mathf.Floor(input),
+			DecimalTruncation.Ceil => Mathf.Ceil(input)
+		});
+	public static float ToDecimalPlaces(this float input, int decimalPlaces = 2,
+		DecimalTruncation truncationMethod = DecimalTruncation.Round)
 	{
-		float multiplier = 1;
-		for (int i = 0; i < decimalPlaces; i++)
-		{
-			multiplier *= 10f;
-		}
+		float multiplier = Mathf.Pow(10, decimalPlaces);
 
-		return new Vector2(
-			Mathf.Round(vector3.x * multiplier) / multiplier,
-			Mathf.Round(vector3.y * multiplier) / multiplier);
-	}
+		input *= multiplier;
 
-	public static float Round(this float input, int decimalPlaces = 2)
-	{
-		float multiplier = 1;
-		for (int i = 0; i < decimalPlaces; i++)
-		{
-			multiplier *= 10f;
-		}
-
-		return
-			Mathf.Round(input * multiplier) / multiplier;
+		return input.ToInt(truncationMethod) / multiplier;
 	}
 
 
@@ -356,6 +355,42 @@ public static class Seb
 
 	public static Vector3 GetMeanVector(this IEnumerable<Vector3> vectors) =>
 		vectors.Aggregate(Vector3.zero, (current, vector) => current + vector) / vectors.Count();
+
+	public static Vector2 Slerp(this Vector2 a, Vector2 b, float t)
+	{
+		float dot = Vector2.Dot(a, b);
+		dot = Mathf.Clamp(dot, -1f, 1f);
+		float theta = Mathf.Acos(dot) * t;
+		Vector2 relativeVec = b - a * dot;
+		relativeVec.Normalize();
+		return (a * Mathf.Cos(theta)) + relativeVec * Mathf.Sin(theta);
+	}
+
+	//swizzles of size 2
+	public static Vector2 XX(this Vector2 a) => new(a.x, a.x);
+	public static Vector2 YX(this Vector2 a) => new(a.y, a.x);
+	public static Vector2 XY(this Vector2 a) => new(a.x, a.y);
+	public static Vector2 YY(this Vector2 a) => new(a.y, a.y);
+
+	//swizzles of size 3 to 2
+	public static Vector2 XX(this Vector3 a) => new(a.x, a.x);
+	public static Vector2 YX(this Vector3 a) => new(a.y, a.x);
+	public static Vector2 XY(this Vector3 a) => a;
+	public static Vector2 YY(this Vector3 a) => new(a.y, a.y);
+	public static Vector2 XZ(this Vector3 a) => new(a.x, a.z);
+	public static Vector2 ZX(this Vector3 a) => new(a.z, a.x);
+	public static Vector2 YZ(this Vector3 a) => new(a.y, a.z);
+	public static Vector2 ZY(this Vector3 a) => new(a.z, a.y);
+
+	//swizzles of size 3
+	public static Vector3 XXX(this Vector2 a) => new(a.x, a.x, a.x);
+	public static Vector3 YXX(this Vector2 a) => new(a.y, a.x, a.x);
+	public static Vector3 XYX(this Vector2 a) => new(a.x, a.y, a.x);
+	public static Vector3 YYX(this Vector2 a) => new(a.y, a.y, a.x);
+	public static Vector3 XXY(this Vector2 a) => new(a.x, a.x, a.y);
+	public static Vector3 YXY(this Vector2 a) => new(a.y, a.x, a.y);
+	public static Vector3 XYY(this Vector2 a) => new(a.x, a.y, a.y);
+	public static Vector3 YYY(this Vector2 a) => new(a.y, a.y, a.y);
 
 #endregion
 
@@ -627,7 +662,8 @@ public static class Seb
 		return input + extension;
 	}
 
-	public static bool Contains(this string[] source, string toCheck, StringComparison comp) =>
+	public static bool Contains(this string[] source, string toCheck,
+		StringComparison comp = StringComparison.CurrentCulture) =>
 		source.Any(s => s.Equals(toCheck, comp));
 
 	public static bool Contains(this string source, string toCheck, StringComparison comp)
@@ -1320,6 +1356,16 @@ public static class Seb
 		}
 	}
 
+	public static bool RemoveFromCollection<Tkey, Tvalue, TCollection>(this IDictionary<Tkey, TCollection> dic,
+		Tkey key, Tvalue value) where TCollection : ICollection<Tvalue>, new()
+	{
+		if (dic.ContainsKey(key) && dic[key] != null)
+		{
+			return dic[key].Remove(value);
+		}
+		else return false;
+	}
+	
 	public static Dictionary<TKey, TCollection> ToCollectionDictionary<TElement, TKey, TValue,
 		TCollection>(this IEnumerable<TElement> source,
 		Func<TElement, TKey> keySelector,
@@ -1771,7 +1817,7 @@ public static class Seb
 	public static float SetSign(this float value, float sign) => Mathf.Abs(value) * Mathf.Sign(sign);
 	public static float SetSign(this float value, bool positive) =>
 		positive ? Mathf.Abs(value) : -Mathf.Abs(value);
-
+	public static float Sign(this float value) => Mathf.Sign(value);
 
 	public static float RoundToMultiple(this float value, float multipleOf) =>
 		Mathf.Round(value / multipleOf) * multipleOf;
@@ -1795,8 +1841,10 @@ public static class Seb
 
 	public static float CapMax(this float f, float max) => Mathf.Min(f, max);
 	public static float CapMin(this float f, float min) => Mathf.Max(f, min);
+	public static float Clamp(this float f, float min, float max) => Mathf.Clamp(f, min, max);
 	public static int CapMax(this int i, int max) => Mathf.Min(i, max);
 	public static int CapMin(this int i, int min) => Mathf.Max(i, min);
+	public static int Clamp(this int i, int min, int max) => Mathf.Clamp(i, min, max);
 
 #endregion
 
@@ -2117,6 +2165,15 @@ public static class Seb
 
 }
 
+public static class ConsoleFormatting
+{
+	public static string Bold(this string str) => "<b>" + str + "</b>";
+	public static string Color(this string str, string clr) => string.Format("<color={0}>{1}</color>", clr, str);
+	public static string Italic(this string str) => "<i>" + str + "</i>";
+	public static string Size(this string str, int size) => string.Format("<size={0}>{1}</size>", size, str);
+
+}
+
 
 [Serializable]
 public class Timer
@@ -2246,7 +2303,7 @@ public class Timer
 	{
 		int hours = Mathf.Abs((int)time / 3600);
 		int minutes = Mathf.Abs((int)(time - hours * 3600) / 60);
-		float seconds = Mathf.Abs((time - hours * 3600 - minutes * 60)).Round(decimalPlaces);
+		float seconds = Mathf.Abs((time - hours * 3600 - minutes * 60)).ToDecimalPlaces(decimalPlaces);
 		char sign = time < 0 ? '-' : ' ';
 		float decimalPart = seconds - (int)seconds;
 		string output = "" + sign;
@@ -2362,6 +2419,45 @@ public static class Directions
 			global::Axis.Y => vec.SetY(value),
 			_ => vec.SetZ(value)
 		};
+}
+
+[Serializable]
+public class SDateTime : IComparable<SDateTime>
+{
+	[SerializeField]
+	private long m_ticks;
+
+	private bool initialized;
+	private DateTime m_dateTime;
+	public DateTime DateTime
+	{
+		get
+		{
+			if (!initialized)
+			{
+				m_dateTime = new DateTime(m_ticks);
+				initialized = true;
+			}
+
+			return m_dateTime;
+		}
+	}
+
+	public SDateTime(DateTime dateTime)
+	{
+		m_ticks = dateTime.Ticks;
+		m_dateTime = dateTime;
+		initialized = true;
+	}
+
+	public int CompareTo(SDateTime other)
+	{
+		if (other == null)
+		{
+			return 1;
+		}
+		return m_ticks.CompareTo(other.m_ticks);
+	}
 }
 
 [Serializable]
@@ -2759,7 +2855,7 @@ public class Map<TKey, TValue> : SDictionary<TKey, TValue>
 		{
 			if (!ContainsKey(key))
 			{
-				Add(key, emptyValueIniter != null ? emptyValueIniter.Invoke() : defaultValue);
+				Add(key, emptyValueIniter != null ? emptyValueIniter.Invoke(key) : defaultValue);
 			}
 
 			return base[key];
@@ -2767,10 +2863,10 @@ public class Map<TKey, TValue> : SDictionary<TKey, TValue>
 		set => base[key] = value;
 	}
 
-	private readonly Func<TValue> emptyValueIniter;
+	private readonly Func<TKey, TValue> emptyValueIniter;
 	private readonly TValue defaultValue;
 
-	public Map(Func<TValue> emptyValueIniter)
+	public Map(Func<TKey, TValue> emptyValueIniter)
 	{
 		this.emptyValueIniter = emptyValueIniter;
 	}
@@ -2947,13 +3043,69 @@ public static class Lines
 
 public static class Reflection
 {
+	public static int CalculateInheritanceDistance(this Type derivedType, Type baseType)
+	{
+		if (derivedType == baseType)
+		{
+			return 0;
+		}
+
+		return CalculateInheritanceDistanceRecursive(baseType, derivedType, 0);
+	}
+
+	private static int CalculateInheritanceDistanceRecursive(Type baseType, Type derivedType, int distance)
+	{
+		if (baseType == null || derivedType == null)
+		{
+			return -1;
+		}
+
+		if (baseType == derivedType)
+		{
+			return distance;
+		}
+		if (baseType.IsInterface && derivedType.GetInterfaces().Contains(baseType))
+		{
+			return distance + 1;
+		}
+		if (baseType.IsGenericTypeDefinition
+		    && derivedType.IsGenericType
+		    && derivedType.GetGenericTypeDefinition() == baseType)
+		{
+			return distance + 1;
+		}
+
+		if (baseType.IsAssignableFrom(derivedType))
+		{
+			return CalculateInheritanceDistanceRecursive(baseType, derivedType.BaseType, distance + 1);
+		}
+		if (baseType.IsInterface)
+		{
+			foreach (var interfaceType in derivedType.GetInterfaces())
+			{
+				var result = CalculateInheritanceDistanceRecursive(baseType, interfaceType, distance + 1);
+				if (result != -1)
+				{
+					return result;
+				}
+			}
+		}
+
+		return -1;
+	}
+	/// <summary>Gets all types that derive from <typeparamref name="T"/>, have a default constructor and are not abstract or generic.</summary>
 	public static IEnumerable<Type> GetAllScriptChildTypes<T>() where T : class =>
 		GetAllScriptChildTypes(typeof(T));
 	public static IEnumerable<Type> GetAllScriptChildTypes(Type type)
 	{
+	#if UNITY_EDITOR
 		return TypeCache.GetTypesDerivedFrom(type)
+		#else
+		return AppDomain.CurrentDomain.GetAssemblies()
+			.SelectMany(a => a.GetTypes())
+			.Where(t => t.IsSubclassOf(type))
+		#endif
 			.Where(t => !t.ContainsGenericParameters
-				&& !t.ContainsGenericParameters
 				&& !t.IsAbstract);
 	}
 
@@ -2977,10 +3129,8 @@ public static class Reflection
 
 	public static IEnumerable<Type> GetAllSingletonScriptChildrenTypes<T>() where T : class
 	{
-		return TypeCache.GetTypesDerivedFrom<T>()
-			.Where(t => !t.ContainsGenericParameters
-				&& t.GetConstructor(Type.EmptyTypes) != null
-				&& !t.IsAbstract)
+		return GetAllScriptChildTypes<T>()
+			.Where(t => t.GetConstructor(Type.EmptyTypes) != null)
 			.Select(t =>
 				new Tuple<Type, IEnumerable<Type>>(t,
 					t.GetBaseClasses(true)))
@@ -3508,4 +3658,68 @@ public static class LinqExtensions
 				list[index] = objList[index];
 		}
 	}
+}
+
+public static class UrlUtils
+{
+
+	public static Uri AddQuery(this Uri uri, string name, string value)
+	{
+		var httpValueCollection = HttpUtility.ParseQueryString(uri.Query);
+
+		httpValueCollection.Remove(name);
+		httpValueCollection.Add(name, value);
+
+		var ub = new UriBuilder(uri);
+
+		// this code block is taken from httpValueCollection.ToString() method
+		// and modified so it encodes strings with HttpUtility.UrlEncode
+		if (httpValueCollection.Count == 0)
+			ub.Query = String.Empty;
+		else
+		{
+			var sb = new StringBuilder();
+
+			for (int i = 0; i < httpValueCollection.Count; i++)
+			{
+				string text = httpValueCollection.GetKey(i);
+				{
+					text = HttpUtility.UrlEncode(text);
+
+					string val = (text != null) ? (text + "=") : string.Empty;
+					string[] vals = httpValueCollection.GetValues(i);
+
+					if (sb.Length > 0)
+						sb.Append('&');
+
+					if (vals == null || vals.Length == 0)
+						sb.Append(val);
+					else
+					{
+						if (vals.Length == 1)
+						{
+							sb.Append(val);
+							sb.Append(HttpUtility.UrlEncode(vals[0]));
+						}
+						else
+						{
+							for (int j = 0; j < vals.Length; j++)
+							{
+								if (j > 0)
+									sb.Append('&');
+
+								sb.Append(val);
+								sb.Append(HttpUtility.UrlEncode(vals[j]));
+							}
+						}
+					}
+				}
+			}
+
+			ub.Query = sb.ToString();
+		}
+
+		return ub.Uri;
+	}
+
 }

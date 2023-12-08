@@ -1,7 +1,5 @@
-using UnityEngine;
 using Sirenix.OdinInspector;
-
-
+using UnityEngine;
 public class ViewSkeleton : MonoBehaviour
 {
 

@@ -21,12 +21,12 @@ public abstract class SingletonScriptableObject<T> : ScriptableMonoObject, ICach
 	static T _instance = null;
 
 
-	protected static T SetInstance()
+	protected static T SetInstance(bool silent = false)
 	{
-		// if (_instance != null) { return _instance; }
+		if (_instance != null) return _instance;
 
 		IEnumerable<T> instances = ScriptablesDatabase.Get<T>();
-		
+
 		if (!instances.Any())
 		{
 		#if UNITY_EDITOR
@@ -36,7 +36,7 @@ public abstract class SingletonScriptableObject<T> : ScriptableMonoObject, ICach
 			AssetDatabase.SaveAssets();
 			Debug.Log("Created new settings file for " + typeof(T).ToString().NormalizeCamel());
 		#else
-            Debug.LogError("No scriptable object singleton of type " + typeof(T));
+           if (!silent) Debug.LogError("No scriptable object singleton of type " + typeof(T));
 		#endif
 		}
 		else
@@ -45,7 +45,7 @@ public abstract class SingletonScriptableObject<T> : ScriptableMonoObject, ICach
 			{
 			#if UNITY_EDITOR
 				Debug.LogError("Multiple "
-					+ _i.GetType()
+					+ instances.First().GetType()
 					+ " detected. Using "
 					+ AssetDatabase.GetAssetPath(instances.FirstOrDefault())
 					+ ". Consider destroying imposters.");
@@ -73,27 +73,30 @@ public abstract class SingletonScriptableObject<T> : ScriptableMonoObject, ICach
 	}
 }
 
-public class ScriptableSingletonHelper : MonoBehaviour
+public class ScriptableSingletonHelper
 {
 #if UNITY_EDITOR
-
-	[UnityEditor.Callbacks.DidReloadScripts, MenuItem("Tools/Scriptable Objects/Refresh Singletons", priority = -99998)]
+	ScriptableSingletonHelper()
+	{
+		ScriptablesDatabase.OnRefresh += DebugSingletons;
+	}
+	
+	[MenuItem("Tools/Scriptable Objects/Refresh Singletons", priority = -99998)]
 	public static void DebugSingletons()
 	{
 		bool assetsMade = false;
-		IEnumerable<Type> singletons =
-			Reflection.GetAllSingletonScriptChildrenTypes<ScriptableMonoObject>();
+		IEnumerable<Type> singletons = Reflection.GetAllSingletonScriptChildrenTypes<ScriptableMonoObject>();
 
 		foreach (Type monoObjectType in singletons)
 		{
-			string[] guids = AssetDatabase.FindAssets("t:" + monoObjectType);
-			string name = monoObjectType.ToString().NormalizeCamel();
-			if (guids.Length > 1)
+			IEnumerable<ScriptableMonoObject> scriptableMonoObjects =
+				ScriptablesDatabase.Get(monoObjectType).ToList();
+			if (scriptableMonoObjects.Count() > 1)
 			{
 				Debug.Log(
-					$"Multiple instances of {monoObjectType} found at:{string.Join(", ", guids.Select(AssetDatabase.GUIDToAssetPath))}");
+					$"Multiple instances of {monoObjectType} found at: {string.Join(", ", scriptableMonoObjects.Select(s => AssetDatabase.GetAssetPath(s)))}");
 			}
-			else if (guids.Length == 0)
+			else if (scriptableMonoObjects.Count() == 0)
 			{
 				ScriptableMonoObject.CreateNew(monoObjectType);
 			}

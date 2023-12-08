@@ -23,28 +23,41 @@ public static class Managers
 		return null;
 	}
 
-	[InitializeOnLoadMethod, ExecuteOnReload]
+#if UNITY_EDITOR
+	[InitializeOnLoadMethod,
+ #else
+[
+ #endif
+	 ExecuteOnReload]
 	private static void PopulateAssociationDic()
 	{
 		ScriptablesDatabase.TryRefresh();
 		associatedTypeSetting = new Dictionary<Type, ScriptableMonoObject>(ScriptablesDatabase
-			.Get(typeof(Manager<>))
-			.Select(t =>
+			.Get(typeof(IManager))
+			.GroupBy(t =>
 			{
-				if (t is not {} s)
+				if (t is not IManager s)
 				{
 					Debug.LogError($"Error with settings");
 
-					return default;
+					return null;
 				}
-
-				return new KeyValuePair<Type, ScriptableMonoObject>(((IManager)s).GetAssociatedType(), s);
-			}).Where(s => s.Key != null));
+				return s.GetAssociatedType();
+			})
+			.Where(g => g.Key != null)
+			.Select(g =>
+			{
+				if (g.Count() > 1)
+				{
+					Debug.LogError($"Multiple settings of type {g.Key} found: {g.Select(s => s.name).Join()}");
+				}
+				return new KeyValuePair<Type, ScriptableMonoObject>(g.Key, g.First(t => t != null) as ScriptableMonoObject);
+			}));
 	}
 }
 
 
-public interface IManager
+public interface IManager : ICacheable 
 {
 	Type GetAssociatedType();
 }
