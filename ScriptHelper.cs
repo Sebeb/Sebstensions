@@ -127,7 +127,6 @@ public class ScriptHelper : MonoBehaviour
 
 		var runnerObj = new GameObject("Script Helper");
 		_instance = runnerObj.AddComponent<ScriptHelper>();
-		Debug.Log("Created new Script Helper");
 
 		fakeStart = Application.isPlaying && Time.frameCount != 0;
 		if (fakeStart) Debug.Log("Faking game start");

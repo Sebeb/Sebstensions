@@ -20,6 +20,10 @@ public abstract class SingletonScriptableObject<T> : ScriptableMonoObject, ICach
 {
 	static T _instance = null;
 
+	public override IEnumerable<string> GetDefaultDirectory()
+	{
+		return base.GetDefaultDirectory().Prepend("Managers");
+	}
 
 	protected static T SetInstance(bool silent = false)
 	{

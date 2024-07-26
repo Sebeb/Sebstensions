@@ -94,7 +94,7 @@ public class ScriptablesDatabase : SerializedScriptableObject
 			.Select(t => t.GetName().Name).Join());
 
 		IEnumerable<Type> cachableType = AppDomain.CurrentDomain.GetAssemblies()
-			.Where(a => a.GetName().Name == "PESSystems" || a.GetName().Name == "Seb")
+			.Where(a => a.GetName().Name == "EverythingAdventure" || a.GetName().Name == "Seb")
 			.SelectMany(a => a.GetTypes())
 			.Where(t => t.CalculateInheritanceDistance(typeof(ICacheable)) >= 0);
 
@@ -168,10 +168,10 @@ public class ScriptablesDatabase : SerializedScriptableObject
 #endif
 
 
-	public static IEnumerable<T> Get<T>()
+	public static IEnumerable<T> Get<T>(bool silent = true)
 	{
 		IEnumerable<T> collection = null;
-		IEnumerable<ScriptableMonoObject> scriptableMonoObjects = Get(typeof(T));
+		IEnumerable<ScriptableMonoObject> scriptableMonoObjects = Get(typeof(T), silent);
 		try
 		{
 			collection = scriptableMonoObjects.Cast<T>();
@@ -186,7 +186,7 @@ public class ScriptablesDatabase : SerializedScriptableObject
 
 	}
 
-	public static IEnumerable<ScriptableMonoObject> Get(Type type, bool silent = false)
+	public static IEnumerable<ScriptableMonoObject> Get(Type type, bool silent = true)
 	{
 		TryRefresh();
 		if (_i.typeScriptablesDic.TryGetValue(type, out ScriptableMonoObject[] scriptables))

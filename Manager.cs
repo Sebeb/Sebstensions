@@ -33,7 +33,7 @@ public static class Managers
 	{
 		ScriptablesDatabase.TryRefresh();
 		associatedTypeSetting = new Dictionary<Type, ScriptableMonoObject>(ScriptablesDatabase
-			.Get(typeof(IManager))
+			.Get(typeof(IManager), true)
 			.GroupBy(t =>
 			{
 				if (t is not IManager s)
