@@ -480,6 +480,9 @@ public static class Seb
 
     #region Transform
 
+    public static RectTransform Rect(this Transform transform) =>
+        transform as RectTransform ?? transform.gameObject.AddComponent<RectTransform>();
+
     public static void Reset(this Transform input, Space space = Space.Self)
     {
         if (space == Space.Self)
@@ -574,46 +577,48 @@ public static class Seb
         return list;
     }
 
-    public static void DestroyChildren(this Transform trans, bool silent = false)
+    public static void DestroyChildren(this Transform trans, bool silent = false, bool immediate = false)
     {
         int childs = trans.childCount;
         for (int i = childs - 1; i >= 0; i--)
         {
-            trans.GetChild(i).gameObject.Destroy(silent: silent);
+            trans.GetChild(i).gameObject.Destroy(immediate, silent);
         }
     }
 
-    public static void Destroy(this Object _go, bool immediate = false, bool silent = false)
+    public static void Destroy(this Object obj, bool immediate = false, bool silent = false)
     {
-        if (_go == null)
+        if (obj == null)
         {
             if (!silent) Debug.LogWarning("Tried to destroy null object");
             return;
         }
 
+        GameObject gameObj = obj as GameObject ?? (obj as Component)?.gameObject;
         if (Application.isPlaying)
         {
             if (immediate)
             {
-                Object.DestroyImmediate(_go);
+                Object.DestroyImmediate(obj);
             }
             else
             {
-                Object.Destroy(_go);
+                Object.Destroy(obj);
             }
         }
 #if UNITY_EDITOR
-        else if (PrefabUtility.IsPartOfAnyPrefab(_go)
-                 && ((GameObject)_go).transform.parent is { } goParent 
+        else if (PrefabUtility.IsPartOfAnyPrefab(obj)
+                 && gameObj.transform.parent is { } goParent
                  && PrefabUtility.IsPartOfAnyPrefab(goParent.gameObject))
+
         {
             if (!silent)
             {
                 Debug.Log(
-                    $"Could not destroy \"{_go.name}\" as it is in a prefab. Disabling instead");
+                    $"Could not destroy \"{obj.name}\" as it is in a prefab. Disabling instead");
             }
 
-            switch (_go)
+            switch (obj)
             {
                 case GameObject gameObject:
                     gameObject.SetActive(false);
@@ -626,7 +631,7 @@ public static class Seb
 #endif
         else
         {
-            Object.DestroyImmediate(_go);
+            Object.DestroyImmediate(obj);
         }
     }
 
@@ -1049,6 +1054,9 @@ public static class Seb
 
     public static Color AsColor(this Vector3 c) => new(c.x, c.y, c.z);
 
+    public static uint AsUInt(this Color c) => (uint)(c.r * 255) << 24 | (uint)(c.g * 255) << 16 |
+                                               (uint)(c.b * 255) << 8 | (uint)(c.a * 255);
+
 
     public static Color Randomize(this Color c) => new(Random.value, Random.value, Random.value, c.a);
 
@@ -1345,6 +1353,18 @@ public static class Seb
             return true;
         }
         else return false;
+    }
+
+    public static bool[] RemoveAll<T>(this IList<T> list, IEnumerable<T> items)
+    {
+        bool[] results = new bool[items.Count()];
+        int i = 0;
+        foreach (T item in items)
+        {
+            results[i++] = list.Remove(item);
+        }
+
+        return results;
     }
 
     private static System.Random _random = new();
@@ -2523,6 +2543,19 @@ public enum Direction3
     Down, Forward, Backward
 }
 
+public enum Direction2
+{
+    Right, Left, Up,
+    Down
+}
+
+public enum Direction2Orth
+{
+    Right, Left, Up,
+    Down, RightUp, LeftDown,
+    RightDown, LeftUp
+}
+
 public enum Axis { X, Y, Z }
 
 public static class Directions
@@ -2549,10 +2582,36 @@ public static class Directions
             { Direction3.Backward, Vector3Int.back }
         };
 
+    private static Dictionary<Direction2Orth, Vector2Int> direction2OrthVectorInt =
+        new()
+        {
+            { Direction2Orth.Right, Vector2Int.right },
+            { Direction2Orth.Left, Vector2Int.left },
+            { Direction2Orth.Up, Vector2Int.up },
+            { Direction2Orth.Down, Vector2Int.down },
+            { Direction2Orth.RightUp, Vector2Int.one },
+            { Direction2Orth.LeftDown, -Vector2Int.one },
+            { Direction2Orth.RightDown, new(1, -1) },
+            { Direction2Orth.LeftUp, new(-1, 1) },
+        };
+
+    public static Vector2Int Vec(this Direction2Orth dir) => direction2OrthVectorInt[dir];
+    public static Vector2Int Vec(this Direction2 dir) => direction2OrthVectorInt[(Direction2Orth)dir];
+
+    public static Vector2Int[] GetNeighbors(this Vector2Int coord)
+    {
+        return new[]
+        {
+            coord + Vector2Int.up,
+            coord + Vector2Int.down,
+            coord + Vector2Int.left,
+            coord + Vector2Int.right
+        };
+    }
+
     public static IEnumerable<Direction3> All => direction3Vector3.Keys;
 
-    public static Vector3 Vec(this Direction3 dir) => direction3Vector3[dir];
-    public static Vector3Int VecInt(this Direction3 dir) => direction3VectorInt[dir];
+    public static Vector3Int Vec(this Direction3 dir) => direction3VectorInt[dir];
 
     public static float GetAxis(this Vector3 vector3, Axis axis) =>
         GetDirection(vector3, (Direction3)((int)axis * 2));
@@ -3956,4 +4015,8 @@ public static class UrlUtils
 
         return ub.Uri;
     }
+
+    public static string ShortenUrlParameters(string uriAbsoluteUri, int i) =>
+        //Split the url by '/', and only show up to i characters of each part, inserting '...' if the part is longer
+        string.Join("/", uriAbsoluteUri.Split('/').Select(s => s.Length > i ? s.Substring(0, i) + "..." : s));
 }

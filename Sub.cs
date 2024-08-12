@@ -1,8 +1,8 @@
 using System;
 using Sirenix.OdinInspector;
 using UnityEngine;
-using UnityEngine.Events;
 using Object = System.Object;
+
 
 [Serializable, InlineProperty]
 public class Sub<T> : ISub
@@ -21,14 +21,12 @@ public class Sub<T> : ISub
         }
     }
 
-    public Action<T> onChange;
-
-    private Action<Object> _onChangeGeneric;
-
-    public Sub(T value, Action<T> onChange = null)
+    public Action<T> onChangeValue;
+    
+    public Sub(T value, Action<T> onChangeValue = null)
     {
         _value = value;
-        if (onChange != null) this.onChange += onChange;
+        if (onChangeValue != null) this.onChangeValue += onChangeValue;
     }
 
     protected Sub()
@@ -37,15 +35,17 @@ public class Sub<T> : ISub
 
     private void OnChange(T value)
     {
-        onChange?.Invoke(value);
-        _onChangeGeneric?.Invoke(value);
+        onChangeValue?.Invoke(value);
+        onChange?.Invoke();
     }
 
-    public Action<Object> onChangeGeneric
+    public Action onChange
     {
-        get { return _onChangeGeneric; }
-        set { _onChangeGeneric = value; }
+        get => _onChange;
+        set => _onChange = value;
     }
+
+    private Action _onChange;
 
     public Object valueGeneric
     {
@@ -56,7 +56,7 @@ public class Sub<T> : ISub
 
 public interface ISub
 {
-    public Action<Object> onChangeGeneric { get; set; }
+    public Action onChange { get; set; }
     public Object valueGeneric { get; set; }
 }
 
@@ -65,7 +65,8 @@ public class SubBool : Sub<bool>
 {
     public SubBool(bool b) => _value = b;
 
-    public static implicit operator bool(SubBool subBool) => subBool._value;
+    public static implicit operator bool(SubBool subBool) => subBool?._value ?? false;
+    
 }
 
 [Serializable]
@@ -79,13 +80,14 @@ public class SubFloat : Sub<float>
 [Serializable]
 public class SubInt : Sub<int>
 {
-    public SubInt(int i, Action<int> onChange = null)
+    public SubInt(int i, Action<int> onChangeValue = null)
     {
         _value = i;
-        if (onChange != null) this.onChange += onChange;
+        if (onChangeValue != null) this.onChangeValue += onChangeValue;
     }
 
     public static implicit operator int(SubInt subInt) => subInt._value;
+    public override string ToString() => _value.ToString();
 }
 
 [Serializable]
@@ -119,10 +121,10 @@ public class SubVector4 : Sub<Vector4>
 [Serializable]
 public class SubColor : Sub<Color>
 {
-    public SubColor(Color color, Action<Color> onChange = null)
+    public SubColor(Color color, Action<Color> onChangeValue = null)
     {
         _value = color;
-        if (onChange != null) this.onChange += onChange;
+        if (onChangeValue != null) this.onChangeValue += onChangeValue;
     }
 
     public static implicit operator Color(SubColor subColor) => subColor._value;
