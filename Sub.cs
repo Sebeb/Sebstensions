@@ -139,5 +139,14 @@ public class SubImage : Sub<UnityEngine.UI.Image>
 [Serializable]
 public class SubSprite : Sub<Sprite>
 {
+    public SubSprite(Sprite data)
+    {
+        _value = data;
+    }
+    public SubSprite(Texture2D data)
+    {
+        _value = Sprite.Create(data, new Rect(0, 0, data.width, data.height), new Vector2(0.5f, 0.5f));
+    }
+
     public static implicit operator Sprite(SubSprite subSprite) => subSprite._value;
 }

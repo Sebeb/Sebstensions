@@ -4,6 +4,7 @@ using System.Linq;
 using System;
 using System.Collections;
 using System.Globalization;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text;
@@ -2205,6 +2206,38 @@ public static class Seb
         System.Reflection.Assembly.GetExecutingAssembly().GetTypes()
             .Where(t => t.IsSubclassOf(typeof(T)));
 
+    public static FieldInfo GetFieldFromPath(this Type type, IEnumerable<string> path,
+        BindingFlags flags = BindingFlags.Instance | BindingFlags.Public)
+    {
+        Type currentType = type;
+        FieldInfo field = null;
+        Stack<string> pathStack = new Stack<string>(path.Reverse());
+        while (pathStack.Count > 0)
+        {
+            if (int.TryParse(pathStack.Peek(), out _))
+            {
+                pathStack.Pop();
+            }
+
+            string fieldName = pathStack.Pop();
+            field = currentType.GetField(fieldName,
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            if (field == null)
+            {
+                Debug.LogError($"Field {fieldName} not found in {currentType} when searching for {path.Join("/")}");
+                return null;
+            }
+
+            if (field.FieldType.IsArray)
+            {
+                currentType = field.FieldType.GetElementType();
+            }
+            else currentType = field.FieldType;
+        }
+
+        return field;
+    }
+
 // AppDomain.CurrentDomain.GetAssemblies()
 // 	.SelectMany(assembly => assembly.GetTypes())
 // 	.Where(type => type.IsSubclassOf(typeof(T)))
@@ -2352,6 +2385,23 @@ public static class Seb
 #endif
 
     #endregion
+
+    #region Textures
+
+    public static Texture2D ToTexture2D(this RenderTexture rTex)
+    {
+        Texture2D tex = new Texture2D(rTex.width, rTex.height, TextureFormat.RGB24, false);
+        var old_rt = RenderTexture.active;
+        RenderTexture.active = rTex;
+
+        tex.ReadPixels(new Rect(0, 0, rTex.width, rTex.height), 0, 0);
+        tex.Apply();
+
+        RenderTexture.active = old_rt;
+        return tex;
+    }
+
+    #endregion
 }
 
 public static class ConsoleFormatting
@@ -2379,10 +2429,18 @@ public class Timer
     public float elapsedTime;
 
     public Func<float> timeFunction = () => Time.time;
-    [SerializeField] private State state;
-    [FoldoutGroup("Settings")] public bool autoUpdate = true;
-    [FoldoutGroup("Settings")] public bool stopOnComplete = true;
-    [DisplayTimerActions("elapsedTime")] public SDictionary<float, Action> actions = new();
+
+    [SerializeField]
+    private State state;
+
+    [FoldoutGroup("Settings")]
+    public bool autoUpdate = true;
+
+    [FoldoutGroup("Settings")]
+    public bool stopOnComplete = true;
+
+    [DisplayTimerActions("elapsedTime")]
+    public SDictionary<float, Action> actions = new();
 
     public Timer(float duration, Action onComplete)
     {
@@ -2651,7 +2709,8 @@ public static class Directions
 [Serializable]
 public class SDateTime : IComparable<SDateTime>
 {
-    [SerializeField] private long m_ticks;
+    [SerializeField]
+    private long m_ticks;
 
     private bool initialized;
     private DateTime m_dateTime;
@@ -2691,9 +2750,11 @@ public class SDateTime : IComparable<SDateTime>
 [Serializable]
 public class SDictionary<TKey, TValue> : Dictionary<TKey, TValue>, ISerializationCallbackReceiver
 {
-    [SerializeField, HideInInspector] private List<TKey> keyData = new();
+    [SerializeField, HideInInspector]
+    private List<TKey> keyData = new();
 
-    [SerializeField] public List<TValue> valueData = new();
+    [SerializeField]
+    public List<TValue> valueData = new();
 
     public SDictionary()
     {
@@ -2761,9 +2822,11 @@ public class SDictionary<TKey, TValue> : Dictionary<TKey, TValue>, ISerializatio
 [Serializable]
 public class SSortedDictionary<TKey, TValue> : SortedDictionary<TKey, TValue>, ISerializationCallbackReceiver
 {
-    [SerializeField, HideInInspector] private List<TKey> keyData = new();
+    [SerializeField, HideInInspector]
+    private List<TKey> keyData = new();
 
-    [SerializeField, HideInInspector] private List<TValue> valueData = new();
+    [SerializeField, HideInInspector]
+    private List<TValue> valueData = new();
 
     void ISerializationCallbackReceiver.OnAfterDeserialize()
     {
@@ -2978,7 +3041,8 @@ public static class Keywords
 [Serializable]
 public class RefillingPool<T>
 {
-    [SerializeField] private List<T> basePool,
+    [SerializeField]
+    private List<T> basePool,
         activePool;
 
     public bool shuffle;
