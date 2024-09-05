@@ -1049,6 +1049,31 @@ public static class Seb
     //https://stackoverflow.com/questions/2395438/convert-system-drawing-color-to-rgb-and-hex-value
     public static string AsHex(this Color c) =>
         "#" + c.r.ToString("X2") + c.g.ToString("X2") + c.b.ToString("X2");
+    
+    public static Color FromHex(this Color c, string hex)
+    {
+        if (hex.StartsWith("#"))
+        {
+            hex = hex.Substring(1);
+        }
+
+        if (hex.Length == 6)
+        {
+            c.r = int.Parse(hex.Substring(0, 2), NumberStyles.HexNumber) / 255f;
+            c.g = int.Parse(hex.Substring(2, 2), NumberStyles.HexNumber) / 255f;
+            c.b = int.Parse(hex.Substring(4, 2), NumberStyles.HexNumber) / 255f;
+            c.a = 1;
+        }
+        else if (hex.Length == 8)
+        {
+            c.r = int.Parse(hex.Substring(0, 2), NumberStyles.HexNumber) / 255f;
+            c.g = int.Parse(hex.Substring(2, 2), NumberStyles.HexNumber) / 255f;
+            c.b = int.Parse(hex.Substring(4, 2), NumberStyles.HexNumber) / 255f;
+            c.a = int.Parse(hex.Substring(6, 2), NumberStyles.HexNumber) / 255f;
+        }
+
+        return c;
+    }
 
     public static Vector4 AsVec4(this Color c) => new(c.r, c.g, c.b, c.a);
     public static Vector3 AsVec3(this Color c) => new(c.r, c.g, c.b);
