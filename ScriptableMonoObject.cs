@@ -138,13 +138,13 @@ public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISer
         Prompt
     }
 
-    public void Save(string name = null, OverwriteMode overwriteMode = OverwriteMode.Increment) =>
-        SaveExisting(this, name, overwriteMode);
+    public void Save(string name = null, OverwriteMode overwriteMode = OverwriteMode.Increment, string path = null) =>
+        SaveExisting(this, name, overwriteMode, path);
 
     public static ScriptableMonoObject SaveExisting(ScriptableMonoObject existingObject, string name = null,
-        OverwriteMode overwriteMode = OverwriteMode.Increment)
+        OverwriteMode overwriteMode = OverwriteMode.Increment, string path = null)
     {
-        string path = existingObject.GetDefaultPath();
+        path ??= existingObject.GetDefaultPath();
         string typeName = existingObject.GetType().Name.Humanize(LetterCasing.Title);
         name ??= !existingObject.name.IsNullOrWhiteSpace()
             ? existingObject.name
