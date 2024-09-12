@@ -3217,6 +3217,18 @@ public class Bictionary<T1, T2> : Dictionary<T1, T2>
 [Serializable]
 public class Map<TKey, TValue> : SDictionary<TKey, TValue>
 {
+    public bool TryGetExistingValue(TKey key, out TValue value)
+    {
+        if (ContainsKey(key))
+        {
+            value = this[key];
+            return true;
+        }
+
+        value = default;
+        return false;
+    } 
+    
     public new TValue this[TKey key]
     {
         get
