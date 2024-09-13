@@ -773,6 +773,13 @@ public static class Seb
             ? s
             : Char.ToUpper(s[0]) + s.Substring(1);
     }
+    
+    public static string LowercaseFirstWord(this string s)
+    {
+        return s == null || s.Length == 0 || Char.IsLower(s[0])
+            ? s
+            : Char.ToLower(s[0]) + s.Substring(1);
+    }
 
     readonly static string[] NoCapitalize = new string[]
         { "for", "and", "the", "of", "in", "a", "an", "or" };
@@ -3517,9 +3524,9 @@ public static class Reflection
         else return null;
     }
 
-    public static IEnumerable<Type> GetAllSingletonScriptChildrenTypes<T>() where T : class
+    public static IEnumerable<Type> GetAllSingletonScriptChildrenTypes(Type type)
     {
-        return GetAllScriptChildTypes<T>()
+        return GetAllScriptChildTypes(type)
             .Where(t => t.GetConstructor(Type.EmptyTypes) != null)
             .Select(t =>
                 new Tuple<Type, IEnumerable<Type>>(t,

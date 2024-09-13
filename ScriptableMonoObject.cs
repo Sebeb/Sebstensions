@@ -88,7 +88,7 @@ public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISer
     [MenuItem("Tools/Scriptable Objects/Reset Locations", priority = -99998)]
     public static void MoveAllToDefaultLocation()
     {
-        IEnumerable<(string, string)> oldNewPath = ScriptablesDatabase.Get(typeof(ScriptableMonoObject))
+        IEnumerable<(string, string)> oldNewPath = Resources.LoadAll<ScriptableMonoObject>("")
             .Where(s => s.autoMovable)
             .Select(m => (m, AssetDatabase.GetAssetPath(m)))
             .Select(ma => (ma.Item2, ma.Item1.GetDefaultPath() + $"/{ma.Item1.name}.asset"))
@@ -249,20 +249,20 @@ public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISer
     {
         if (!Application.isPlaying) return;
 
-        List<IStartCallback> awakeCallbacks = ScriptablesDatabase.Get<IStartCallback>().ToList();
-        Debug.Log($"Starting {awakeCallbacks.Count()} mono scripts");
-        foreach (IStartCallback monoScript in awakeCallbacks)
-        {
-            //Handle exceptions
-            try
-            {
-                monoScript.ScriptStart();
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"Error starting {((ScriptableMonoObject)monoScript).name}: {e}");
-            }
-        }
+        // List<IStartCallback> awakeCallbacks = ScriptablesDatabase.Get<IStartCallback>().ToList();
+        // Debug.Log($"Starting {awakeCallbacks.Count()} mono scripts");
+        // foreach (IStartCallback monoScript in awakeCallbacks)
+        // {
+        //     //Handle exceptions
+        //     try
+        //     {
+        //         monoScript.ScriptStart();
+        //     }
+        //     catch (Exception e)
+        //     {
+        //         Debug.LogError($"Error starting {((ScriptableMonoObject)monoScript).name}: {e}");
+        //     }
+        // }
     }
 
     //TODO Init all singletons which implement SingletonScriptableObject<>
@@ -270,38 +270,38 @@ public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISer
 
     public static void InitSingletons()
     {
-        foreach (IInitCallbacksNoReinit monoScript in initedOnce
-                     ? ScriptablesDatabase.Get<IInitCallbacks>()
-                     : ScriptablesDatabase.Get<IInitCallbacksNoReinit>())
-        {
-            monoScript.Initialize();
-        }
-
-        initedOnce = true;
+        // foreach (IInitCallbacksNoReinit monoScript in initedOnce
+        //              ? ScriptablesDatabase.Get<IInitCallbacks>()
+        //              : ScriptablesDatabase.Get<IInitCallbacksNoReinit>())
+        // {
+        //     monoScript.Initialize();
+        // }
+        //
+        // initedOnce = true;
     }
 
     public static void UpdateMonoScripts()
     {
-        if (!Application.isPlaying)
-        {
-            return;
-        }
-
-        foreach (IUpdateCallback monoScript in ScriptablesDatabase.Get<IUpdateCallback>())
-        {
-            monoScript.Update();
-        }
+        // if (!Application.isPlaying)
+        // {
+        //     return;
+        // }
+        //
+        // foreach (IUpdateCallback monoScript in ScriptablesDatabase.Get<IUpdateCallback>())
+        // {
+        //     monoScript.Update();
+        // }
     }
 
 
     public static void ResetMonoScripts(bool isRestart)
     {
-        foreach (IInitCallbacksNoReinit monoScript in isRestart
-                     ? ScriptablesDatabase.Get<IInitCallbacks>()
-                     : ScriptablesDatabase.Get<IInitCallbacksNoReinit>())
-        {
-            monoScript.Deinitialize();
-        }
+        // foreach (IInitCallbacksNoReinit monoScript in isRestart
+        //              ? ScriptablesDatabase.Get<IInitCallbacks>()
+        //              : ScriptablesDatabase.Get<IInitCallbacksNoReinit>())
+        // {
+        //     monoScript.Deinitialize();
+        // }
     }
 
     protected static Coroutine StartCoroutine(IEnumerator coro, bool allowInEditor = false) =>

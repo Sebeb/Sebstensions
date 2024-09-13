@@ -29,7 +29,7 @@ public abstract class SingletonScriptableObject<T> : ScriptableMonoObject, ICach
 	{
 		if (_instance != null) return _instance;
 
-		IEnumerable<T> instances = ScriptablesDatabase.Get<T>();
+		IEnumerable<T> instances = Resources.LoadAll<T>("");
 
 		if (!instances.Any())
 		{
@@ -80,29 +80,24 @@ public abstract class SingletonScriptableObject<T> : ScriptableMonoObject, ICach
 public class ScriptableSingletonHelper
 {
 #if UNITY_EDITOR
-	ScriptableSingletonHelper()
-	{
-		ScriptablesDatabase.OnRefresh += DebugSingletons;
-	}
-	
 	[MenuItem("Tools/Scriptable Objects/Refresh Singletons", priority = -99998)]
 	public static void DebugSingletons()
 	{
 		bool assetsMade = false;
-		IEnumerable<Type> singletons = Reflection.GetAllSingletonScriptChildrenTypes<ScriptableMonoObject>();
+		List<Type> singletonTypes = Reflection.GetAllSingletonScriptChildrenTypes(typeof(SingletonScriptableObject<>)).ToList();
 
-		foreach (Type monoObjectType in singletons)
+		foreach (Type singletonType in singletonTypes)
 		{
-			IEnumerable<ScriptableMonoObject> scriptableMonoObjects =
-				ScriptablesDatabase.Get(monoObjectType).ToList();
+			IEnumerable<ScriptableMonoObject> scriptableMonoObjects = Resources.LoadAll("", singletonType).Cast<ScriptableMonoObject>();
 			if (scriptableMonoObjects.Count() > 1)
 			{
 				Debug.Log(
-					$"Multiple instances of {monoObjectType} found at: {string.Join(", ", scriptableMonoObjects.Select(s => AssetDatabase.GetAssetPath(s)))}");
+					$"Multiple instances of {singletonType} found at: {string.Join(", ", scriptableMonoObjects.Select(s => AssetDatabase.GetAssetPath(s)))}");
 			}
 			else if (scriptableMonoObjects.Count() == 0)
 			{
-				ScriptableMonoObject.CreateNew(monoObjectType);
+				ScriptableMonoObject.CreateNew(singletonType);
+                assetsMade = true;
 			}
 		}
 
