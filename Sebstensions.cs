@@ -119,6 +119,10 @@ public static class Seb
     {
         return new Vector2Int(input.x, input.z);
     }
+    public static Vector2Int XY(this Vector3Int input)
+    {
+        return new Vector2Int(input.x, input.y);
+    }
 
     public static Vector3Int Y2Z(this Vector2Int input, int newY)
     {
@@ -1740,6 +1744,20 @@ public static class Seb
     public static IDictionary<T2, T1> Inverse<T1, T2>(this IDictionary<T1, T2> dic) =>
         dic.ToDictionary(x => x.Value, x => x.Key);
 
+    public static List<T> AddOrOverwrite<T>(this List<T> list, T item, int index)
+    {
+        if (index < 0 || index >= list.Count)
+        {
+            list.Add(item);
+        }
+        else
+        {
+            list[index] = item;
+        }
+
+        return list;
+    }
+
     #endregion
 
     #region Comparison
@@ -2188,7 +2206,7 @@ public static class Seb
     }
 
     /// <returns>True if folder already exists, false if it was created</returns>
-    public static bool EnsureFolderExists(this string path)
+    public static bool EnsureDirectoryExists(this string path)
     {
         if (Directory.Exists(path))
         {

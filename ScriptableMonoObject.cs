@@ -110,7 +110,7 @@ public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISer
 
         foreach ((string oldPath, string newPath) in oldNewPath)
         {
-            if (!Path.GetDirectoryName(newPath).EnsureFolderExists()) AssetDatabase.Refresh();
+            if (!Path.GetDirectoryName(newPath).EnsureDirectoryExists()) AssetDatabase.Refresh();
             AssetDatabase.MoveAsset(oldPath, newPath);
 
             Debug.Log($"Moving {oldPath} to {newPath}");
@@ -150,7 +150,7 @@ public class ScriptableMonoObject : SerializedScriptableObject, ICacheable, ISer
             ? existingObject.name
             : typeName;
         string assetPath = $"{path}/{name}.asset";
-        path.EnsureFolderExists();
+        path.EnsureDirectoryExists();
 
 #if UNITY_EDITOR
         if (Application.isEditor && File.Exists(assetPath) && overwriteMode == OverwriteMode.Prompt)
